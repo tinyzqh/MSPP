@@ -8,7 +8,7 @@ import torch
 from torch.nn import functional as F
 from typing import Iterable
 from torch.nn import Module
-from dreamer.parameter import args
+from parameter import args
 import pandas as pd
 
 def Save_Txt(xs, ys_population, title, path='', xaxis='episode'):

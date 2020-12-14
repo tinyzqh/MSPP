@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from dreamer.env import postprocess_observation, preprocess_observation_
+from env import postprocess_observation, preprocess_observation_
 
 
 class ExperienceReplay():

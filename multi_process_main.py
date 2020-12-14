@@ -8,14 +8,14 @@ from torch.distributions.kl import kl_divergence
 from torch.nn import functional as F
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
-from dreamer.env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
-from dreamer.memory import ExperienceReplay
-from dreamer.models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel
-from dreamer.planner import MPCPlanner
-from dreamer.utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters
+from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
+from memory import ExperienceReplay
+from models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel
+from planner import MPCPlanner
+from utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters
 from tensorboardX import SummaryWriter
 
-from dreamer.parameter import args
+from parameter import args
 
 args.overshooting_distance = min(args.chunk_size, args.overshooting_distance)  # Overshooting distance cannot be greater than chunk size
 print(' ' * 26 + 'Options')

@@ -8,14 +8,14 @@ from torch.distributions.kl import kl_divergence
 from torch.nn import functional as F
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
-from dreamer.env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
-from dreamer.memory import ExperienceReplay
-from dreamer.models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel
-from dreamer.planner import MPCPlanner
-from dreamer.utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, ActivateParameters
+from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
+from memory import ExperienceReplay
+from models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel
+from planner import MPCPlanner
+from utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, ActivateParameters
 from tensorboardX import SummaryWriter
 
-from dreamer.parameter import args
+from parameter import args
 args.MultiGPU = False
 
 args.overshooting_distance = min(args.chunk_size, args.overshooting_distance)  # Overshooting distance cannot be greater than chunk size
@@ -24,10 +24,10 @@ for k, v in vars(args).items():
   print(' ' * 26 + k + ': ' + str(v))
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 # Setup
-results_dir = os.path.join('results', '{}_{}'.format(args.env, args.id))
+results_dir = os.path.join('results', '{}_{}_{}_{}_{}_{}'.format(args.env, args.id, args.seed, args.algo, args.action_repeat, args.overshooting_kl_beta))
 os.makedirs(results_dir, exist_ok=True)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
@@ -55,8 +55,8 @@ def job(temp, i):
     temp.append((observation, action, reward, done))
     observation = next_observation
     t += 1
-    if t == 20:
-      done = True
+    # if t == 20:
+    #   done = True
     # done=True
   temp.append(t)
   env.close()
@@ -234,13 +234,13 @@ if __name__ == "__main__":
           overshooting_vars.append((F.pad(actions[t:d], seq_pad), F.pad(nonterminals[t:d], seq_pad), F.pad(rewards[t:d], seq_pad[2:]), beliefs[t_], prior_states[t_], F.pad(posterior_means[t_ + 1:d_ + 1].detach(), seq_pad), F.pad(posterior_std_devs[t_ + 1:d_ + 1].detach(), seq_pad, value=1), F.pad(torch.ones(d - t, args.batch_size, args.state_size, device=args.device), seq_pad)))  # Posterior standard deviations must be padded with > 0 to prevent infinite KL divergences
         overshooting_vars = tuple(zip(*overshooting_vars))
         # Update belief/state using prior from previous belief/state and previous action (over entire sequence at once)
-        beliefs, prior_states, prior_means, prior_std_devs = transition_model(torch.cat(overshooting_vars[4], dim=0), torch.cat(overshooting_vars[0], dim=1), torch.cat(overshooting_vars[3], dim=0), None, torch.cat(overshooting_vars[1], dim=1))
+        beliefs_, prior_states_, prior_means_, prior_std_devs_ = transition_model(torch.cat(overshooting_vars[4], dim=0), torch.cat(overshooting_vars[0], dim=1), torch.cat(overshooting_vars[3], dim=0), None, torch.cat(overshooting_vars[1], dim=1))
         seq_mask = torch.cat(overshooting_vars[7], dim=1)
         # Calculate overshooting KL loss with sequence mask
-        kl_loss += (1 / args.overshooting_distance) * args.overshooting_kl_beta * torch.max((kl_divergence(Normal(torch.cat(overshooting_vars[5], dim=1), torch.cat(overshooting_vars[6], dim=1)), Normal(prior_means, prior_std_devs)) * seq_mask).sum(dim=2), free_nats).mean(dim=(0, 1)) * (args.chunk_size - 1)  # Update KL loss (compensating for extra average over each overshooting/open loop sequence)
+        kl_loss += (1 / args.overshooting_distance) * args.overshooting_kl_beta * torch.max((kl_divergence(Normal(torch.cat(overshooting_vars[5], dim=1), torch.cat(overshooting_vars[6], dim=1)), Normal(prior_means_, prior_std_devs_)) * seq_mask).sum(dim=2), free_nats).mean(dim=(0, 1)) * (args.chunk_size - 1)  # Update KL loss (compensating for extra average over each overshooting/open loop sequence)
         # Calculate overshooting reward prediction loss with sequence mask
         if args.overshooting_reward_scale != 0:
-          reward_loss += (1 / args.overshooting_distance) * args.overshooting_reward_scale * F.mse_loss(bottle(reward_model, (beliefs, prior_states)) * seq_mask[:, :, 0], torch.cat(overshooting_vars[2], dim=1), reduction='none').mean(dim=(0, 1)) * (args.chunk_size - 1)  # Update reward loss (compensating for extra average over each overshooting/open loop sequence)
+          reward_loss += (1 / args.overshooting_distance) * args.overshooting_reward_scale * F.mse_loss(bottle(reward_model, (beliefs_, prior_states_)) * seq_mask[:, :, 0], torch.cat(overshooting_vars[2], dim=1), reduction='none').mean(dim=(0, 1)) * (args.chunk_size - 1)  # Update reward loss (compensating for extra average over each overshooting/open loop sequence)
       # Apply linearly ramping learning rate schedule
       if args.learning_rate_schedule != 0:
         for group in model_optimizer.param_groups:

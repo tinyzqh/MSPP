@@ -1,14 +1,14 @@
 import argparse
-from dreamer.env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
+from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
 from torch.nn import functional as F
 # Hyperparameters
 parser = argparse.ArgumentParser(description='PlaNet or Dreamer')
 # parser.add_argument('--algo', type=str, default='dreamer', help='planet or dreamer')
-parser.add_argument('--algo', type=str, default='planet', help='planet or dreamer')
+parser.add_argument('--algo', type=str, default='dreamer', help='planet or dreamer')
 parser.add_argument('--id', type=str, default='default', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=1, metavar='S', help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--env', type=str, default='cartpole-balance', choices=GYM_ENVS + CONTROL_SUITE_ENVS,
+parser.add_argument('--env', type=str, default='cartpole-swingup', choices=GYM_ENVS + CONTROL_SUITE_ENVS,
                     help='Gym/Control Suite environment')
 parser.add_argument('--symbolic-env', action='store_true', help='Symbolic features')
 parser.add_argument('--max-episode-length', type=int, default=1000, metavar='T', help='Max episode length')
@@ -23,7 +23,7 @@ parser.add_argument('--embedding-size', type=int, default=1024, metavar='E',
 parser.add_argument('--hidden-size', type=int, default=200, metavar='H', help='Hidden size')
 parser.add_argument('--belief-size', type=int, default=200, metavar='H', help='Belief/hidden size')
 parser.add_argument('--state-size', type=int, default=30, metavar='Z', help='State/latent size')
-parser.add_argument('--action-repeat', type=int, default=2, metavar='R', help='Action repeat')
+parser.add_argument('--action-repeat', type=int, default=8, metavar='R', help='Action repeat')
 parser.add_argument('--action-noise', type=float, default=0.3, metavar='ε', help='Action noise')
 parser.add_argument('--episodes', type=int, default=1000, metavar='E', help='Total number of episodes')
 parser.add_argument('--seed-episodes', type=int, default=5, metavar='S', help='Seed episodes')
@@ -34,7 +34,7 @@ parser.add_argument('--worldmodel-LogProbLoss', action='store_true',
                     help='use LogProb loss for observation_model and reward_model training')
 parser.add_argument('--overshooting-distance', type=int, default=50, metavar='D',
                     help='Latent overshooting distance/latent overshooting weight for t = 1')
-parser.add_argument('--overshooting-kl-beta', type=float, default=0, metavar='β>1',
+parser.add_argument('--overshooting-kl-beta', type=float, default=2, metavar='β>1',
                     help='Latent overshooting KL weight for t > 1 (0 to disable)')
 parser.add_argument('--overshooting-reward-scale', type=float, default=0, metavar='R>1',
                     help='Latent overshooting reward prediction weight for t > 1 (0 to disable)')
@@ -63,5 +63,5 @@ parser.add_argument('--checkpoint-experience', action='store_true', help='Checkp
 parser.add_argument('--models', type=str, default='', metavar='M', help='Load model checkpoint')
 parser.add_argument('--experience-replay', type=str, default='', metavar='ER', help='Load experience replay')
 parser.add_argument('--render', action='store_true', help='Render environment')
-parser.add_argument('--MultiGPU', type=bool, default=True, help='if use multi gpu')
+parser.add_argument('--MultiGPU', type=bool, default=False, help='if use multi gpu')
 args = parser.parse_args()

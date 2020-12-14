@@ -4,10 +4,10 @@ from torch import jit, nn
 from torch.nn import functional as F
 import torch.distributions
 from torch.distributions.normal import Normal
-from torch.distributions.transforms import Transform, TanhTransform
+# from torch.distributions.transforms import Transform, TanhTransform
 from torch.distributions.transformed_distribution import TransformedDistribution
 import numpy as np
-from dreamer.parameter import args
+from parameter import args
 
 # Wraps the input tuple for a function to process a time x batch x features sequence in batch x features (assumes one output)
 def bottle(f, x_tuple):
