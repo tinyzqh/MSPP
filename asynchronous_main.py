@@ -192,8 +192,9 @@ class Plan(object):
         actor_states = posterior_states.detach().to(device=args.device).share_memory_()
         actor_beliefs = beliefs.detach().to(device=args.device).share_memory_()
 
-      torch.save(actor_states, "/home/hzq/Master's_thesis/tensor_data/actor_states.pt")
-      torch.save(actor_beliefs, "/home/hzq/Master's_thesis/tensor_data/actor_beliefs.pt")
+      if not os.path.exists(os.path.join(os.getcwd(), 'tensor_data')): os.mkdir(os.path.join(os.getcwd(), 'tensor_data'))
+      torch.save(actor_states, os.path.join(os.getcwd(), 'tensor_data/actor_states.pt"'))
+      torch.save(actor_beliefs, os.path.join(os.getcwd(), 'tensor_data/actor_beliefs.pt"'))
 
       # [self.actor_pipes[i][0].send(1) for i, w in enumerate(self.workers_actor)]  # Parent_pipe send data using i'th pipes
       # [self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
