@@ -1,5 +1,6 @@
 from typing import Optional, List
 import torch
+import time
 from torch import jit, nn
 from torch.nn import functional as F
 import torch.distributions
@@ -16,8 +17,6 @@ def bottle(f, x_tuple):
   y_size = y.size()
   return y.view(x_sizes[0][0], x_sizes[0][1], *y_size[1:])
 
-
-
 # class TransitionModel(jit.ScriptModule):
 class TransitionModel(nn.Module):
   __constants__ = ['min_std_dev']
@@ -32,8 +31,8 @@ class TransitionModel(nn.Module):
     self.fc_state_prior = nn.Linear(hidden_size, 2 * state_size)
     self.fc_embed_belief_posterior = nn.Linear(belief_size + embedding_size, hidden_size)
     self.fc_state_posterior = nn.Linear(hidden_size, 2 * state_size)
-    if not args.MultiGPU:
-      self.modules = [self.fc_embed_state_action, self.fc_embed_belief_prior, self.fc_state_prior, self.fc_embed_belief_posterior, self.fc_state_posterior]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc_embed_state_action, self.fc_embed_belief_prior, self.fc_state_prior, self.fc_embed_belief_posterior, self.fc_state_posterior]
 
   # Operates over (previous) state, (previous) actions, (previous) belief, (previous) nonterminals (mask), and (current) observations
   # Diagram of expected inputs and outputs for T = 5 (-x- signifying beginning of output belief/state that gets sliced off):
@@ -93,8 +92,8 @@ class SymbolicObservationModel(nn.Module):
     self.fc1 = nn.Linear(belief_size + state_size, embedding_size)
     self.fc2 = nn.Linear(embedding_size, embedding_size)
     self.fc3 = nn.Linear(embedding_size, observation_size)
-    if not args.MultiGPU:
-      self.modules = [self.fc1, self.fc2, self.fc3]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc1, self.fc2, self.fc3]
 
   # @jit.script_method
   def forward(self, belief, state):
@@ -102,7 +101,6 @@ class SymbolicObservationModel(nn.Module):
     hidden = self.act_fn(self.fc2(hidden))
     observation = self.fc3(hidden)
     return observation
-
 
 # class VisualObservationModel(jit.ScriptModule):
 class VisualObservationModel(nn.Module):
@@ -117,8 +115,8 @@ class VisualObservationModel(nn.Module):
     self.conv2 = nn.ConvTranspose2d(128, 64, 5, stride=2)
     self.conv3 = nn.ConvTranspose2d(64, 32, 6, stride=2)
     self.conv4 = nn.ConvTranspose2d(32, 3, 6, stride=2)
-    if not args.MultiGPU:
-      self.modules = [self.fc1, self.conv1, self.conv2, self.conv3, self.conv4]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc1, self.conv1, self.conv2, self.conv3, self.conv4]
 
   # @jit.script_method
   def forward(self, belief, state):
@@ -129,7 +127,6 @@ class VisualObservationModel(nn.Module):
     hidden = self.act_fn(self.conv3(hidden))
     observation = self.conv4(hidden)
     return observation
-
 
 def ObservationModel(symbolic, observation_size, belief_size, state_size, embedding_size, activation_function='relu'):
   if symbolic:
@@ -146,8 +143,8 @@ class RewardModel(nn.Module):
     self.fc1 = nn.Linear(belief_size + state_size, hidden_size)
     self.fc2 = nn.Linear(hidden_size, hidden_size)
     self.fc3 = nn.Linear(hidden_size, 1)
-    if not args.MultiGPU:
-      self.modules = [self.fc1, self.fc2, self.fc3]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc1, self.fc2, self.fc3]
 
   # @jit.script_method
   def forward(self, belief, state):
@@ -166,8 +163,8 @@ class ValueModel(nn.Module):
     self.fc2 = nn.Linear(hidden_size, hidden_size)
     self.fc3 = nn.Linear(hidden_size, hidden_size)
     self.fc4 = nn.Linear(hidden_size, 1)
-    if not args.MultiGPU:
-      self.modules = [self.fc1, self.fc2, self.fc3, self.fc4]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc1, self.fc2, self.fc3, self.fc4]
 
   # @jit.script_method
   def forward(self, belief, state):
@@ -178,8 +175,49 @@ class ValueModel(nn.Module):
     reward = self.fc4(hidden).squeeze(dim=1)
     return reward
 
+class MergeModel(nn.Module):
+  def __init__(self, belief_size, state_size, hidden_size, action_size, pool_size,  activation_function='relu', dist='tanh_normal', min_std=1e-4, init_std=5, mean_scale=5):
+    super().__init__()
+    self.act_fn = getattr(F, activation_function)
+    self.fc1 = nn.Linear(belief_size + state_size + action_size * pool_size * 2, hidden_size)
+    self.fc2 = nn.Linear(hidden_size, hidden_size)
+    self.fc3 = nn.Linear(hidden_size, hidden_size)
+    self.fc4 = nn.Linear(hidden_size, hidden_size)
+    self.fc5 = nn.Linear(hidden_size, 2 * action_size)
+    self.model_modules = [self.fc1, self.fc2, self.fc3, self.fc4, self.fc5]
+
+    self._dist = dist
+    self._min_std = torch.tensor(min_std, dtype=torch.float)
+    self._init_std = torch.tensor(init_std, dtype=torch.float)
+    self._mean_scale = torch.tensor(mean_scale, dtype=torch.float)
+
+  def forward(self, merge_action, belief, state):
+    raw_init_std = torch.log(torch.exp(self._init_std) - torch.tensor(1, dtype=torch.float))
+    x = torch.cat([merge_action, belief, state], dim=1)
+    hidden = self.act_fn(self.fc1(x))
+    hidden = self.act_fn(self.fc2(hidden))
+    hidden = self.act_fn(self.fc3(hidden))
+    hidden = self.act_fn(self.fc4(hidden))
+    action = self.fc5(hidden).squeeze(dim=1)
+
+    action_mean, action_std_dev = torch.chunk(action, 2, dim=1)
+    action_mean = self._mean_scale * torch.tanh(action_mean / self._mean_scale)
+    action_std = F.softplus(action_std_dev + raw_init_std) + self._min_std
+    return action_mean, action_std
+
+  def get_merge_action(self, merge_action, belief, state, det=False):
+    action_mean, action_std = self.forward(merge_action, belief, state)
+    dist = Normal(action_mean, action_std)
+    dist = TransformedDistribution(dist, TanhBijector())
+    dist = torch.distributions.Independent(dist,1)
+    dist = SampleDist(dist)
+    if det: return dist.mode()
+    else: return dist.rsample()
+
 # class ActorModel(jit.ScriptModule):
 class ActorModel(nn.Module):
+  prev_state = None
+  prev_belief = None
   def __init__(self, belief_size, state_size, hidden_size, action_size, dist='tanh_normal',
                 activation_function='elu', min_std=1e-4, init_std=5, mean_scale=5):
     super().__init__()
@@ -189,8 +227,8 @@ class ActorModel(nn.Module):
     self.fc3 = nn.Linear(hidden_size, hidden_size)
     self.fc4 = nn.Linear(hidden_size, hidden_size)
     self.fc5 = nn.Linear(hidden_size, 2*action_size)
-    if not args.MultiGPU:
-      self.modules = [self.fc1, self.fc2, self.fc3, self.fc4, self.fc5]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc1, self.fc2, self.fc3, self.fc4, self.fc5]
 
     self._dist = dist
     self._min_std = torch.tensor(min_std, dtype=torch.float)
@@ -213,7 +251,9 @@ class ActorModel(nn.Module):
     return action_mean, action_std
 
   def get_action(self, belief, state, det=False):
+
     action_mean, action_std = self.forward(belief, state)
+
     dist = Normal(action_mean, action_std)
     dist = TransformedDistribution(dist, TanhBijector())
     dist = torch.distributions.Independent(dist,1)
@@ -221,6 +261,9 @@ class ActorModel(nn.Module):
     if det: return dist.mode()
     else: return dist.rsample()
 
+  def get_action_mean_std(self, belief, state):
+    action_mean, action_std = self.forward(belief, state)
+    return  action_mean, action_std
 
 # class SymbolicEncoder(jit.ScriptModule):
 class SymbolicEncoder(nn.Module):
@@ -230,8 +273,8 @@ class SymbolicEncoder(nn.Module):
     self.fc1 = nn.Linear(observation_size, embedding_size)
     self.fc2 = nn.Linear(embedding_size, embedding_size)
     self.fc3 = nn.Linear(embedding_size, embedding_size)
-    if not args.MultiGPU:
-      self.modules = [self.fc1, self.fc2, self.fc3]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.fc1, self.fc2, self.fc3]
 
   # @jit.script_method
   def forward(self, observation):
@@ -239,7 +282,6 @@ class SymbolicEncoder(nn.Module):
     hidden = self.act_fn(self.fc2(hidden))
     hidden = self.fc3(hidden)
     return hidden
-
 
 # class VisualEncoder(jit.ScriptModule):
 class VisualEncoder(nn.Module):
@@ -254,8 +296,8 @@ class VisualEncoder(nn.Module):
     self.conv3 = nn.Conv2d(64, 128, 4, stride=2)
     self.conv4 = nn.Conv2d(128, 256, 4, stride=2)
     self.fc = nn.Identity() if embedding_size == 1024 else nn.Linear(1024, embedding_size)
-    if not args.MultiGPU:
-      self.modules = [self.conv1, self.conv2, self.conv3, self.conv4]
+    # if not (torch.cuda.device_count() > 1 and args.MultiGPU):
+    self.model_modules = [self.conv1, self.conv2, self.conv3, self.conv4]
 
   # @jit.script_method
   def forward(self, observation):
@@ -266,7 +308,6 @@ class VisualEncoder(nn.Module):
     hidden = hidden.view(-1, 1024)
     hidden = self.fc(hidden)  # Identity if embedding size is 1024 else linear projection
     return hidden
-
 
 def Encoder(symbolic, observation_size, embedding_size, activation_function='relu'):
   if args.MultiGPU:
@@ -281,7 +322,6 @@ def Encoder(symbolic, observation_size, embedding_size, activation_function='rel
       return SymbolicEncoder(observation_size, embedding_size, activation_function)
     else:
       return VisualEncoder(embedding_size, activation_function)
-
 
 # "atanh", "TanhBijector" and "SampleDist" are from the following repo
 # https://github.com/juliusfrost/dreamer-pytorch

@@ -57,3 +57,6 @@ class ExperienceReplay():
     # [ 686  687  688 ...  733  734  735]
     # [1377 1378 1379 ... 1424 1425 1426]]
     return [torch.as_tensor(item).to(device=self.device) for item in batch]
+  def get_size(self):
+    print("memory idx {}".format(self.idx))
+    return 1

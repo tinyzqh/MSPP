@@ -40,10 +40,22 @@ class plot_txts(object):
             plt.legend()
             # plt.tight_layout()
 
-
 def main():
     instantiation = plot_txts()
-    all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_1_dreamer")
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-swingup_seed_1_dreamer_kl_beta_0_action_repeat_8")
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_1_dreamer")
+
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_global_split_test_seed_1_p2p_kl_beta_2_action_repeat_8")
+
+
+    # standard: obs_loss 2; reward_loss 0.02; kl loss 3.2
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance/cartpole-balance_seed_1_dreamer_kl_beta_0_action_repeat_8")
+
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_global_split_test_seed_1_dreamer_kl_beta_1_action_repeat_8")
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_global_split_test_seed_1_dreamer_kl_beta_1_action_repeat_2")
+
+    # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance/cartpole-balance_global_split_test_seed_1_dreamer_kl_beta_0_action_repeat_8")
+    all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_final_seed_1_dreamer_kl_beta_1_action_repeat_2_explore")
     instantiation.process_txts(all_txt_path)
 
 if __name__ == "__main__":

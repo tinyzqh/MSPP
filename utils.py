@@ -1,4 +1,5 @@
 import os
+import time
 import cv2
 import numpy as np
 import plotly
@@ -87,7 +88,10 @@ def imagine_ahead(prev_state, prev_belief, policy, transition_model, planning_ho
   # Loop over time sequence
   for t in range(T - 1):
     _state = prior_states[t]
+    # start_time = time.time()
     actions = policy.get_action(beliefs[t].detach(),_state.detach())
+    # end_time = time.time()
+    # print("the time is {}".format(end_time-start_time))
     # Compute belief (deterministic hidden state)
     if args.MultiGPU:
         hidden = transition_model.module.act_fn(transition_model.module.fc_embed_state_action(torch.cat([_state, actions], dim=1)))
@@ -108,6 +112,19 @@ def imagine_ahead(prev_state, prev_belief, policy, transition_model, planning_ho
   # imagined_traj = [beliefs, prior_states, prior_means, prior_std_devs]
   imagined_traj = [torch.stack(beliefs[1:], dim=0), torch.stack(prior_states[1:], dim=0), torch.stack(prior_means[1:], dim=0), torch.stack(prior_std_devs[1:], dim=0)]
   return imagined_traj
+
+
+def get_modules(modules):
+  res = []
+  for module in modules:
+    if hasattr(module, "model_modules"):
+      module_res = module.model_modules
+    else:
+      module_res = module.module.model_modules
+    res.extend(module_res)
+  return res
+
+
 
 def lambda_return(imged_reward, value_pred, bootstrap, discount=0.99, lambda_=0.95):
   # Setting lambda=1 gives a discounted Monte Carlo return.
