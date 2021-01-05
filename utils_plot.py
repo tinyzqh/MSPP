@@ -55,7 +55,7 @@ def main():
     # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_global_split_test_seed_1_dreamer_kl_beta_1_action_repeat_2")
 
     # all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance/cartpole-balance_global_split_test_seed_1_dreamer_kl_beta_0_action_repeat_8")
-    all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/dreamer/results/cartpole-balance_final_seed_1_dreamer_kl_beta_1_action_repeat_2_explore")
+    all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master's_thesis/Kagebunsin-no-jyutu/results/cartpole-balance_final_seed_1_dreamer_kl_beta_1_action_repeat_2_explore")
     instantiation.process_txts(all_txt_path)
 
 if __name__ == "__main__":
