@@ -1,13 +1,13 @@
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
-from dreamer.parameter import args
-from dreamer.models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel, MergeModel
-from dreamer.utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters, get_modules
+from parameter import args
+from models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel, MergeModel
+from utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters, get_modules
 from torch.distributions import Normal
-from dreamer.asynchronous_init_sample import Worker_init_Sample
+from asynchronous_init_sample import Worker_init_Sample
 from torch.multiprocessing import Pipe, Manager
-from dreamer.asynchronous_actor import Worker_actor
+from asynchronous_actor import Worker_actor
 
 class Algorithms(object):
 

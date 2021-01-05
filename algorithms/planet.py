@@ -1,8 +1,8 @@
 import torch.nn as nn
-from dreamer.parameter import args
+from parameter import args
 from torch import jit
 import torch
-from dreamer.parameter import args
+from parameter import args
 
 # Model-predictive control planner with cross-entropy method and learned transition model
 class MPCPlanner(nn.Module):

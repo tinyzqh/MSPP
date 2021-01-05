@@ -1,5 +1,5 @@
 import argparse
-from dreamer.env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
+from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
 from torch.nn import functional as F
 # Hyperparameters
 parser = argparse.ArgumentParser(description='PlaNet or Dreamer')

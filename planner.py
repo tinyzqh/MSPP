@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from dreamer.parameter import args
+from parameter import args
 from torch import jit
 
 # Model-predictive control planner with cross-entropy method and learned transition model

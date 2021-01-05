@@ -1,17 +1,17 @@
 import torch
 import time
 from torch.nn import functional as F
-from dreamer.env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
+from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
 from typing import Iterable
 from torch.nn import Module
-from dreamer.parameter import args
+from parameter import args
 import pandas as pd
 import torch.multiprocessing as mp
-from dreamer.utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters, get_modules
-from dreamer.models import bottle
+from utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters, get_modules
+from models import bottle
 from torch import nn, optim
 from torch.distributions import Normal
-from dreamer.models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel
+from models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel
 
 class Worker_actor(mp.Process):
 

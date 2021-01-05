@@ -1,6 +1,6 @@
-from dreamer.env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
+from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
 import multiprocessing as mp
-from dreamer.parameter import args
+from parameter import args
 
 class Worker_init_Sample(mp.Process):
 
@@ -18,8 +18,8 @@ class Worker_init_Sample(mp.Process):
       sub_datas.append((observation, action, reward, done))
       observation = next_observation
       t += 1
-      # if t == 20:
-      #   done = True
+      if t == 20:
+        done = True
     sub_datas.append(t)
     self.child_conn.send(sub_datas)
     self.child_conn.close()
