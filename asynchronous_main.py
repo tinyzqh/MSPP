@@ -376,12 +376,7 @@ class Plan(object):
     obs = torch.transpose(obs, 0, 1).to(device=args.device) if args.MultiGPU and obs is not None else obs
     temp_val = self.transition_model(prev_state.to(device=args.device), actions.to(device=args.device), prev_belief.to(device=args.device), obs, nonterminals)
     
-    # for x in temp_val:
-    #   if x.shape[1] != prev_state.shape[0]:
-    #     x1, x2 = x.chunk(2, 0)
-    #     torch.cat(x.chunk(2, 0), 1)
-    # return list(map(lambda x: x.view(-1, prev_state.shape[0], x.shape[2]), [x for x in temp_val]))
-    return list(map(lambda x: torch.cat(x.chunk(3, 0), 1) if x.shape[1] != prev_state.shape[0] else x , [x for x in temp_val]))
+    return list(map(lambda x: torch.cat(x.chunk(torch.cuda.device_count(), 0), 1) if x.shape[1] != prev_state.shape[0] else x , [x for x in temp_val]))
 
   def save_loss_data(self, losses):
     self.metrics['observation_loss'].append(losses[0])
