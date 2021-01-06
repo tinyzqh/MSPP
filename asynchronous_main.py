@@ -192,8 +192,9 @@ class Plan(object):
         actor_states = posterior_states.detach().to(device=args.device).share_memory_()
         actor_beliefs = beliefs.detach().to(device=args.device).share_memory_()
 
-      torch.save(actor_states, "/home/hzq/Master's_thesis/tensor_data/actor_states.pt")
-      torch.save(actor_beliefs, "/home/hzq/Master's_thesis/tensor_data/actor_beliefs.pt")
+      if not os.path.exists(os.path.join(os.getcwd(), 'tensor_data')): os.mkdir(os.path.join(os.getcwd(), 'tensor_data'))
+      torch.save(actor_states, os.path.join(os.getcwd(), 'tensor_data/actor_states.pt"'))
+      torch.save(actor_beliefs, os.path.join(os.getcwd(), 'tensor_data/actor_beliefs.pt"'))
 
       # [self.actor_pipes[i][0].send(1) for i, w in enumerate(self.workers_actor)]  # Parent_pipe send data using i'th pipes
       # [self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
@@ -374,7 +375,13 @@ class Plan(object):
     nonterminals = torch.transpose(nonterminals, 0, 1).to(device=args.device) if args.MultiGPU and nonterminals is not None else nonterminals
     obs = torch.transpose(obs, 0, 1).to(device=args.device) if args.MultiGPU and obs is not None else obs
     temp_val = self.transition_model(prev_state.to(device=args.device), actions.to(device=args.device), prev_belief.to(device=args.device), obs, nonterminals)
-    return list(map(lambda x: x.view(-1, prev_state.shape[0], x.shape[2]), [x for x in temp_val]))
+    
+    # for x in temp_val:
+    #   if x.shape[1] != prev_state.shape[0]:
+    #     x1, x2 = x.chunk(2, 0)
+    #     torch.cat(x.chunk(2, 0), 1)
+    # return list(map(lambda x: x.view(-1, prev_state.shape[0], x.shape[2]), [x for x in temp_val]))
+    return list(map(lambda x: torch.cat(x.chunk(3, 0), 1) if x.shape[1] != prev_state.shape[0] else x , [x for x in temp_val]))
 
   def save_loss_data(self, losses):
     self.metrics['observation_loss'].append(losses[0])
