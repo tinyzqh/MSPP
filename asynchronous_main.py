@@ -1,11 +1,6 @@
 import os
 import time
 import sys
-# p = os.path.dirname(os.path.dirname((os.path.abspath('__file__'))))
-# if p not in sys.path:
-sys.path.append("/home/hzq/Master's_thesis/dreamer")
-sys.path.append("/home/hzq/Master's_thesis")
-import torch.multiprocessing as torch_mp
 import numpy as np
 import torch
 import multiprocessing as mp
@@ -57,7 +52,7 @@ class Plan(object):
     self.param_list = list(self.transition_model.parameters()) + list(self.observation_model.parameters()) + list(self.reward_model.parameters()) + list(self.encoder.parameters())
     self.model_optimizer = optim.Adam(self.param_list, lr=0 if args.learning_rate_schedule != 0 else args.model_learning_rate, eps=args.adam_epsilon)
 
-  def update_belief_and_act_multi_gpu(self, args, env, belief, posterior_state, action, observation, explore=True):
+  def update_belief_and_act(self, args, env, belief, posterior_state, action, observation, explore=True):
     # Infer belief over current state q(s_t|o≤t,a<t) from the history
     # print("action size: ",action.size()) torch.Size([1, 6])
     belief, _, _, _, posterior_state, _, _ = self.upper_transition_model(posterior_state, action.unsqueeze(dim=0), belief, self.encoder(observation).unsqueeze(dim=0), None)
@@ -85,6 +80,10 @@ class Plan(object):
       print("async sub actor")
       from algorithms.actor_pool_1 import Algorithms_actor
       self.algorithms = Algorithms_actor(self.env.action_size, self.transition_model, self.encoder, self.reward_model, self.observation_model)
+    elif args.algo == 'dreamer_two_repeat':
+      print('dreamer_two_repeat')
+      from algorithms.dreamer_two_action_repeat import Algorithms
+      self.algorithms = Algorithms(self.env.action_size, self.transition_model, self.encoder, self.reward_model, self.observation_model)
     else:
       print("planet")
       from algorithms.planet import Algorithms
@@ -218,7 +217,7 @@ class Plan(object):
       pbar = tqdm(range(args.max_episode_length // args.action_repeat))
       for t in pbar:
         # print("step",t)
-        belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act_multi_gpu(args, self.env, belief, posterior_state, action, observation.to(device=args.device), explore=True)
+        belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(device=args.device), explore=True)
         self.D.append(observation, action.cpu(), reward, done)
         total_reward += reward
         observation = next_observation
@@ -253,7 +252,7 @@ class Plan(object):
       belief, posterior_state, action = torch.zeros(args.test_episodes, args.belief_size, device=args.device), torch.zeros(args.test_episodes, args.state_size, device=args.device), torch.zeros(args.test_episodes, self.env.action_size, device=args.device)
       pbar = tqdm(range(args.max_episode_length // args.action_repeat))
       for t in pbar:
-        belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act_multi_gpu(args, test_envs, belief, posterior_state, action, observation.to(device=args.device))
+        belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act(args, test_envs, belief, posterior_state, action, observation.to(device=args.device))
         total_rewards += reward.numpy()
         if not args.symbolic_env:  # Collect real vs. predicted frames for video
           video_frames.append(make_grid(torch.cat([observation, self.observation_model(belief, posterior_state).cpu()], dim=3) + 0.5, nrow=5).numpy())  # Decentre
@@ -301,7 +300,7 @@ class Plan(object):
         belief, posterior_state, action = torch.zeros(1, args.belief_size, device=args.device), torch.zeros(1, args.state_size, device=args.device), torch.zeros(1, self.env.action_size, device=args.device)
         pbar = tqdm(range(args.max_episode_length // args.action_repeat))
         for t in pbar:
-          belief, posterior_state, action, observation, reward, done = self.update_belief_and_act_multi_gpu(args, self.env, belief, posterior_state, action, observation.to(evice=args.device))
+          belief, posterior_state, action, observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(evice=args.device))
           total_reward += reward
           if args.render: self.env.render()
           if done:

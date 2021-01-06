@@ -48,7 +48,7 @@ parser.add_argument('--experience-replay', type=str, default='', metavar='ER', h
 parser.add_argument('--render', action='store_true', help='Render environment')
 
 # ['cartpole-balance', 'cartpole-swingup', 'reacher-easy', 'finger-spin', 'cheetah-run', 'ball_in_cup-catch', 'walker-walk','reacher-hard', 'walker-run', 'humanoid-stand', 'humanoid-walk', 'fish-swim', 'acrobot-swingup']
-parser.add_argument('--algo', type=str, default='dreamer', help='planet, dreamer, p2p, actor_pool_1')
+parser.add_argument('--algo', type=str, default='dreamer_two_repeat', help='planet, dreamer, p2p, actor_pool_1, dreamer_two_repeat')
 parser.add_argument('--overshooting-kl-beta', type=float, default=1, metavar='β>1',help='Latent overshooting KL weight for t > 1 (0 to disable)')
 parser.add_argument('--overshooting-reward-scale', type=float, default=0, metavar='R>1', help='Latent overshooting reward prediction weight for t > 1 (0 to disable)')
 parser.add_argument('--global-kl-beta', type=float, default=0, metavar='βg', help='Global KL weight (0 to disable)')

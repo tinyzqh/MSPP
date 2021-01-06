@@ -16,12 +16,6 @@ class Algorithms(object):
     self.actor_optimizer = optim.Adam(self.actor_model.parameters(), lr=0 if args.learning_rate_schedule != 0 else args.actor_learning_rate, eps=args.adam_epsilon)
     self.value_optimizer = optim.Adam(self.value_model.parameters(), lr=0 if args.learning_rate_schedule != 0 else args.value_learning_rate, eps=args.adam_epsilon)
 
-    # transition_model_modules = self.transition_model.model_modules if hasattr(self.transition_model, "model_modules") else list(self.transition_model.module.modules())
-    # encoder_model_modules = self.encoder.model_modules if hasattr(self.encoder, "model_modules") else list(self.encoder.module.modules())
-    # observation_model_modules = self.observation_model.model_modules if hasattr(self.observation_model, "model_modules") else list(self.observation_model.module.modules())
-    # reward_model_modules = self.reward_model.model_modules if hasattr(self.reward_model, "model_modules") else list(self.reward_model.module.modules())
-    # self.model_modules = transition_model_modules + encoder_model_modules + observation_model_modules + reward_model_modules
-
     self.env_model_modules = get_modules([self.transition_model, self.encoder, self.observation_model, self.reward_model])
     self.value_model_modules = get_modules([self.value_model])
 
@@ -67,7 +61,7 @@ class Algorithms(object):
     self.value_optimizer.step()
 
     self.sub_actor_losses.append([actor_loss.item(), value_loss.item()])
-    # return [actor_loss, value_loss]
+
 
   def save_loss_data(self, metrics_episodes):
     losses = tuple(zip(*self.sub_actor_losses))
@@ -97,7 +91,6 @@ class Algorithms(object):
     action_repate = []
     for t in range(T - 1):
       _state = prior_states[t]
-      # start_time = time.time()
 
       if action_repate.__len__() == 0:
         action_candidate = policy.get_action(beliefs[t].detach(), _state.detach())
@@ -106,10 +99,6 @@ class Algorithms(object):
 
       actions = action_repate.pop()
 
-
-
-      # end_time = time.time()
-      # print("the time is {}".format(end_time-start_time))
       # Compute belief (deterministic hidden state)
       if args.MultiGPU:
         hidden = transition_model.module.act_fn(transition_model.module.fc_embed_state_action(torch.cat([_state, actions], dim=1)))
@@ -138,23 +127,3 @@ class Algorithms(object):
   def eval_to_train(self):
     self.actor_model.train()
     self.value_model.train()
-
-  # def get_action(self, belief, posterior_state, explore=False):
-  #   action = self.planner.get_action(belief, posterior_state, det=not (explore))
-  #   # if args.algo == "dreamer":
-  #   #
-  #   # elif args.algo == "p2p":
-  #   #   merge_action_list = []
-  #   #   for actor_l in self.actor_pool:
-  #   #     actions_l_mean, actions_l_std = actor_l.get_action_mean_std(belief, posterior_state)
-  #   #     merge_action_list.append(actions_l_mean)
-  #   #     merge_action_list.append(actions_l_std)
-  #   #   merge_actions = torch.cat(merge_action_list, dim=1)
-  #   #   action = self.planner.get_merge_action(merge_actions, belief, posterior_state)
-  #   # elif args.algo == "planet":
-  #   #   action = self.planner(belief, posterior_state)  # Get action from planner(q(s_t|o≤t,a<t), p)
-  #   # elif args.algo == "actor_pool_1":
-  #   #   action = self.planner.get_action(belief, posterior_state, det=not (explore))
-  #   # else:
-  #   #   action = self.planner.get_action(belief, posterior_state, det=not (explore))
-  #   return action
