@@ -103,7 +103,7 @@ class Algorithms(object):
 
   def save_loss_data(self, metrics_episodes):
     losses = tuple(zip(*self.merge_losses))
-    self.metrics['merge_value_loss'].append(losses[0])
+    self.metrics['merge_actor_loss'].append(losses[0])
     self.metrics['merge_value_loss'].append(losses[1])
     Save_Txt(metrics_episodes[-1], self.metrics['merge_actor_loss'][-1], 'merge_actor_loss', args.results_dir)
     Save_Txt(metrics_episodes[-1], self.metrics['merge_value_loss'][-1], 'merge_value_loss', args.results_dir)

@@ -5,7 +5,7 @@ from torch.nn import functional as F
 parser = argparse.ArgumentParser(description='PlaNet or Dreamer')
 # parser.add_argument('--algo', type=str, default='dreamer', help='planet or dreamer')
 parser.add_argument('--id', type=str, default='default', help='Experiment ID')
-parser.add_argument('--seed', type=int, default=1, metavar='S', help='Random seed')
+parser.add_argument('--seed', type=int, default=5, metavar='S', help='Random seed')
 parser.add_argument('--env', type=str, default='cartpole-balance', choices=GYM_ENVS + CONTROL_SUITE_ENVS, help='Gym/Control Suite environment')
 parser.add_argument('--symbolic-env', action='store_true', help='Symbolic features')
 parser.add_argument('--max-episode-length', type=int, default=1000, metavar='T', help='Max episode length')
@@ -46,9 +46,10 @@ parser.add_argument('--checkpoint-experience', action='store_true', help='Checkp
 parser.add_argument('--models', type=str, default='', metavar='M', help='Load model checkpoint')
 parser.add_argument('--experience-replay', type=str, default='', metavar='ER', help='Load experience replay')
 parser.add_argument('--render', action='store_true', help='Render environment')
+parser.add_argument('--worldmodel-LogProbLoss', action='store_true', help='use LogProb loss for observation_model and reward_model training')
 
 # ['cartpole-balance', 'cartpole-swingup', 'reacher-easy', 'finger-spin', 'cheetah-run', 'ball_in_cup-catch', 'walker-walk','reacher-hard', 'walker-run', 'humanoid-stand', 'humanoid-walk', 'fish-swim', 'acrobot-swingup']
-parser.add_argument('--algo', type=str, default='dreamer_two_repeat', help='planet, dreamer, p2p, actor_pool_1, dreamer_two_repeat')
+parser.add_argument('--algo', type=str, default='p2p', help='planet, dreamer, p2p, actor_pool_1, dreamer_two_repeat')
 parser.add_argument('--overshooting-kl-beta', type=float, default=1, metavar='β>1',help='Latent overshooting KL weight for t > 1 (0 to disable)')
 parser.add_argument('--overshooting-reward-scale', type=float, default=0, metavar='R>1', help='Latent overshooting reward prediction weight for t > 1 (0 to disable)')
 parser.add_argument('--global-kl-beta', type=float, default=0, metavar='βg', help='Global KL weight (0 to disable)')
@@ -56,9 +57,7 @@ parser.add_argument('--MultiGPU', type=bool, default=True, help='if use multi gp
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
 parser.add_argument('--MergeAgent', type=bool, default=True, help='if use multi gpu')
 parser.add_argument('--pool_len', type=int, default=2, help='number of sub actor in actor_pool')
-parser.add_argument('--batch-size', type=int, default=51, metavar='B', help='Batch size')
-# parser.add_argument('--batch-size', type=int, default=50, metavar='B', help='Batch size')
+parser.add_argument('--batch-size', type=int, default=36, metavar='B', help='Batch size')
 parser.add_argument('--results_dir', type=str, default='some_error_happened', help="if the value == default, there may be some error")
-parser.add_argument('--worldmodel-LogProbLoss', action='store_true', help='use LogProb loss for observation_model and reward_model training')
-
+parser.add_argument('--action-scale', type=int, default=2, metavar='TS', help='Action scale')
 args = parser.parse_args()

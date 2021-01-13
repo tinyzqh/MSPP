@@ -1,4 +1,5 @@
 import torch
+import os
 import time
 from torch.nn import functional as F
 from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
@@ -46,8 +47,8 @@ class Worker_actor(mp.Process):
         while self.child_conn.recv() == 1:
             # print("Start Multi actor-critic Processing, The Process ID is {} -------------------------------".format(self.process_id))
             with FreezeParameters(self.env_model_modules):
-                actor_states = torch.load("/home/hzq/Master's_thesis/tensor_data/actor_states.pt")
-                actor_beliefs = torch.load("/home/hzq/Master's_thesis/tensor_data/actor_beliefs.pt")
+                actor_states = torch.load(os.path.join(os.getcwd(), 'tensor_data/actor_states.pt'))
+                actor_beliefs = torch.load(os.path.join(os.getcwd(), 'tensor_data/actor_beliefs.pt'))
 
                 prev_state = self._flatten(actor_states.cuda()) if torch.cuda.is_available() and not args.disable_cuda else self._flatten(actor_states.cpu())
                 prev_belief = self._flatten(actor_beliefs.cuda()) if torch.cuda.is_available() and not args.disable_cuda else self._flatten(actor_beliefs.cpu())
@@ -130,8 +131,8 @@ class Worker_actor(mp.Process):
                 losses = tuple(zip(*self.losses))
                 self.metrics['actor_loss'].append(losses[0])
                 self.metrics['value_loss'].append(losses[1])
-                Save_Txt(self.metrics['episodes'][-1], self.metrics['actor_loss'][-1], 'actor_loss', self.results_dir)
-                Save_Txt(self.metrics['episodes'][-1], self.metrics['value_loss'][-1], 'value_loss', self.results_dir)
+                Save_Txt(self.metrics['episodes'][-1], self.metrics['actor_loss'][-1], 'actor_loss' + str(self.process_id), self.results_dir)
+                Save_Txt(self.metrics['episodes'][-1], self.metrics['value_loss'][-1], 'value_loss' + str(self.process_id), self.results_dir)
                 self.count = 0
 
             # print("End Multi actor-critic Processing, The Process ID is {} -------------------------------".format(self.process_id))

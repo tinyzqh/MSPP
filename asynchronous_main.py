@@ -23,7 +23,7 @@ class Plan(object):
 
   def __init__(self):
 
-    self.results_dir = os.path.join('results','{}_final_seed_{}_{}_kl_beta_{}_action_repeat_{}_explore'.format(args.env, args.seed, args.algo,args.overshooting_kl_beta, args.action_repeat))
+    self.results_dir = os.path.join('results','{}_final_seed_{}_{}_kl_beta_{}_action_repeat_{}_no_explore'.format(args.env, args.seed, args.algo,args.overshooting_kl_beta, args.action_repeat))
     args.results_dir = self.results_dir
     self.__basic_setting()
     self.__init_sample() # Sampleing The Init Data
@@ -52,7 +52,7 @@ class Plan(object):
     self.param_list = list(self.transition_model.parameters()) + list(self.observation_model.parameters()) + list(self.reward_model.parameters()) + list(self.encoder.parameters())
     self.model_optimizer = optim.Adam(self.param_list, lr=0 if args.learning_rate_schedule != 0 else args.model_learning_rate, eps=args.adam_epsilon)
 
-  def update_belief_and_act(self, args, env, belief, posterior_state, action, observation, explore=True):
+  def update_belief_and_act(self, args, env, belief, posterior_state, action, observation, explore=False):
     # Infer belief over current state q(s_t|o≤t,a<t) from the history
     # print("action size: ",action.size()) torch.Size([1, 6])
     belief, _, _, _, posterior_state, _, _ = self.upper_transition_model(posterior_state, action.unsqueeze(dim=0), belief, self.encoder(observation).unsqueeze(dim=0), None)
@@ -192,8 +192,8 @@ class Plan(object):
         actor_beliefs = beliefs.detach().to(device=args.device).share_memory_()
 
       if not os.path.exists(os.path.join(os.getcwd(), 'tensor_data')): os.mkdir(os.path.join(os.getcwd(), 'tensor_data'))
-      torch.save(actor_states, os.path.join(os.getcwd(), 'tensor_data/actor_states.pt"'))
-      torch.save(actor_beliefs, os.path.join(os.getcwd(), 'tensor_data/actor_beliefs.pt"'))
+      torch.save(actor_states, os.path.join(os.getcwd(), 'tensor_data/actor_states.pt'))
+      torch.save(actor_beliefs, os.path.join(os.getcwd(), 'tensor_data/actor_beliefs.pt'))
 
       # [self.actor_pipes[i][0].send(1) for i, w in enumerate(self.workers_actor)]  # Parent_pipe send data using i'th pipes
       # [self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
@@ -217,7 +217,7 @@ class Plan(object):
       pbar = tqdm(range(args.max_episode_length // args.action_repeat))
       for t in pbar:
         # print("step",t)
-        belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(device=args.device), explore=True)
+        belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(device=args.device))
         self.D.append(observation, action.cpu(), reward, done)
         total_reward += reward
         observation = next_observation
@@ -423,10 +423,11 @@ class Plan(object):
 
 
 if __name__ == "__main__":
+  mp.set_start_method("spawn")
   # args.MultiGPU = False
   os.environ['CUDA_VISIBLE_DEVICES'] = '3,2,1'
   torch.cuda.empty_cache()
-  mp.set_start_method("spawn")
+
   Plan().run()
 
 
