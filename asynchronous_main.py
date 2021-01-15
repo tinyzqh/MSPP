@@ -23,7 +23,7 @@ class Plan(object):
 
   def __init__(self):
 
-    self.results_dir = os.path.join('results','{}_seed_{}_{}__action_scale_{}_no_explore'.format(args.env, args.seed, args.algo, args.action_scale))
+    self.results_dir = os.path.join('results','{}_seed_{}_{}_action_scale_{}_no_explore'.format(args.env, args.seed, args.algo, args.action_scale))
     args.results_dir = self.results_dir
     self.__basic_setting()
     self.__init_sample() # Sampleing The Init Data
