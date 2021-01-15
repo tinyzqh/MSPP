@@ -109,7 +109,7 @@ def main():
 
 
     instantiation = plot_single_txts()
-    all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master_thesis/Kagebunsin-no-jyutu/results/cartpole-balance_final_seed_5_p2p_kl_beta_1_action_repeat_2_no_explore")
+    all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/Master_thesis/Kagebunsin-no-jyutu/results/cartpole-balance_final_seed_5_p2p_kl_beta_1_action_scale_2_no_explore")
     instantiation.process_txts(all_txt_path)
 
 if __name__ == "__main__":

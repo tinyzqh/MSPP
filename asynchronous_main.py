@@ -23,7 +23,7 @@ class Plan(object):
 
   def __init__(self):
 
-    self.results_dir = os.path.join('results','{}_final_seed_{}_{}_kl_beta_{}_action_repeat_{}_no_explore'.format(args.env, args.seed, args.algo,args.overshooting_kl_beta, args.action_repeat))
+    self.results_dir = os.path.join('results','{}_seed_{}_{}__action_scale_{}_no_explore'.format(args.env, args.seed, args.algo, args.action_scale))
     args.results_dir = self.results_dir
     self.__basic_setting()
     self.__init_sample() # Sampleing The Init Data
@@ -97,7 +97,7 @@ class Plan(object):
     # Training (and testing)
     for episode in tqdm(range(self.metrics['episodes'][-1] + 1, args.episodes + 1), total=args.episodes, initial=self.metrics['episodes'][-1] + 1):
       losses = self.train()
-      self.algorithms.save_loss_data(self.metrics['episodes']) # Update and plot loss metrics
+      # self.algorithms.save_loss_data(self.metrics['episodes']) # Update and plot loss metrics
       self.save_loss_data(tuple(zip(*losses)))  # Update and plot loss metrics
       self.data_collection(episode=episode)  # Data collection
       if episode % args.test_interval == 0: self.test(episode=episode)  # Test model

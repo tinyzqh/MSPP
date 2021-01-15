@@ -67,7 +67,7 @@ class Algorithms(object):
     [self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
 
     with FreezeParameters(self.model_modules):
-      imagination_traj = self.imagine_ahead(prev_state=actor_states, prev_belief=actor_beliefs, policy_pool=self.actor_pool, transition_model=self.transition_model, merge_model=self.merge_actor_model)
+      imagination_traj = self.imagine_merge_ahead(prev_state=actor_states, prev_belief=actor_beliefs, policy_pool=self.actor_pool, transition_model=self.transition_model, merge_model=self.merge_actor_model)
     imged_beliefs, imged_prior_states, imged_prior_means, imged_prior_std_devs = imagination_traj
 
     with FreezeParameters(self.model_modules + self.merge_value_model_modules):
@@ -107,9 +107,10 @@ class Algorithms(object):
     self.metrics['merge_value_loss'].append(losses[1])
     Save_Txt(metrics_episodes[-1], self.metrics['merge_actor_loss'][-1], 'merge_actor_loss', args.results_dir)
     Save_Txt(metrics_episodes[-1], self.metrics['merge_value_loss'][-1], 'merge_value_loss', args.results_dir)
+    [sub_actor.save_loss_data(metrics_episodes) for sub_actor in self.workers_actor] # save sub actor loss
     self.merge_losses = []
 
-  def imagine_ahead(self, prev_state, prev_belief, policy_pool, transition_model, merge_model, planning_horizon=12):
+  def imagine_merge_ahead(self, prev_state, prev_belief, policy_pool, transition_model, merge_model, planning_horizon=12):
     flatten = lambda x: x.view([-1] + list(x.size()[2:]))
     prev_belief = flatten(prev_belief)
     prev_state = flatten(prev_state)
