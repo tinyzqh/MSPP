@@ -27,6 +27,17 @@ class Plan(object):
     args.results_dir = self.results_dir
     self.__basic_setting()
     self.__init_sample() # Sampleing The Init Data
+    # Initialise algorithms parameters set
+    if args.algo == "dreamer":
+      args.action_scale = 1
+    elif args.algo == "p2p":
+      pass
+    elif args.algo == "actor_pool_1":
+      pass
+    elif args.algo == 'dreamer_two_repeat':
+      args.action_scale = 2
+    else:
+      args.MultiGPU = False
 
     # Initialise model parameters randomly
     self.transition_model = TransitionModel(args.belief_size, args.state_size, self.env.action_size, args.hidden_size, args.embedding_size, args.dense_activation_function).to(device=args.device)
@@ -71,6 +82,7 @@ class Plan(object):
     if args.algo == "dreamer":
       print("DREAMER")
       from algorithms.dreamer import Algorithms
+      args.action_scale = 1
       self.algorithms = Algorithms(self.env.action_size, self.transition_model, self.encoder, self.reward_model, self.observation_model)
     elif args.algo == "p2p":
       print("planing to plan")
@@ -82,11 +94,13 @@ class Plan(object):
       self.algorithms = Algorithms_actor(self.env.action_size, self.transition_model, self.encoder, self.reward_model, self.observation_model)
     elif args.algo == 'dreamer_two_repeat':
       print('dreamer_two_repeat')
-      from algorithms.dreamer_two_action_repeat import Algorithms
+      from algorithms.dreamer import Algorithms
+      args.action_scale = 2
       self.algorithms = Algorithms(self.env.action_size, self.transition_model, self.encoder, self.reward_model, self.observation_model)
     else:
       print("planet")
       from algorithms.planet import Algorithms
+      args.MultiGPU = False
       self.algorithms = Algorithms(self.env.action_size, self.transition_model, self.reward_model)
 
     if args.test: self.test_only()

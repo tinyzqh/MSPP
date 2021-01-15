@@ -53,16 +53,16 @@ parser.add_argument('--global-kl-beta', type=float, default=0, metavar='βg', he
 
 parser.add_argument('--MultiGPU', type=bool, default=True, help='if use multi gpu')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
+parser.add_argument('--action-scale', type=int, default=-1, metavar='TS', help='Action scale; Only used in dreamer, IF Not in dreamer, set -1.')
 # parser.add_argument('--MergeAgent', type=bool, default=True, help='if use multi gpu')
 
 # ['cartpole-balance', 'cartpole-swingup', 'reacher-easy', 'finger-spin', 'cheetah-run', 'ball_in_cup-catch', 'walker-walk','reacher-hard', 'walker-run', 'humanoid-stand', 'humanoid-walk', 'fish-swim', 'acrobot-swingup']
 parser.add_argument('--seed', type=int, default=5, metavar='S', help='Random seed')
 parser.add_argument('--env', type=str, default='cartpole-balance', choices=GYM_ENVS + CONTROL_SUITE_ENVS, help='Gym/Control Suite environment')
-parser.add_argument('--algo', type=str, default='p2p', help='planet, dreamer, p2p, actor_pool_1, dreamer_two_repeat')
+parser.add_argument('--algo', type=str, default='planet', help='planet, dreamer, p2p, actor_pool_1')
 
 parser.add_argument('--pool_len', type=int, default=2, help='number of sub actor in actor_pool')
 parser.add_argument('--batch-size', type=int, default=36, metavar='B', help='Batch size')
 parser.add_argument('--results_dir', type=str, default='some_error_happened', help="if the value == default, there may be some error")
-parser.add_argument('--action-scale', type=int, default=-1, metavar='TS', help='Action scale; Only used in dreamer, IF Not in dreamer, set -1.')
 parser.add_argument('--sub-traintime', type=int, default=5, metavar='TT', help='train time of sub actor.')
 args = parser.parse_args()

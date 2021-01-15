@@ -44,8 +44,8 @@ class MPCPlanner(nn.Module):
       #
       # else:
       #   beliefs, states, _, _ = self.transition_model(state, actions, belief)
-
       # beliefs, states, _, _ = self.transition_model(state, actions, belief)# [12, 1000, 200] [12, 1000, 30] : 12 horizon steps; 1000 candidates
+
       # Calculate expected returns (technically sum of rewards over planning horizon)
       returns = self.reward_model(beliefs.view(-1, H), states.view(-1, Z)).view(self.planning_horizon, -1).sum(dim=0) #output from r-model[12000]->view[12, 1000]->sum[1000]
       # Re-fit belief to the K best action sequencessetting -> Repositories
@@ -64,22 +64,6 @@ class Algorithms(object):
 
   def get_action(self, belief, posterior_state, explore=False):
     action = self.planner(belief, posterior_state)  # Get action from planner(q(s_t|o≤t,a<t), p)
-    # if args.algo == "dreamer":
-    #   action = self.planner.get_action(belief, posterior_state, det=not (explore))
-    # elif args.algo == "p2p":
-    #   merge_action_list = []
-    #   for actor_l in self.actor_pool:
-    #     actions_l_mean, actions_l_std = actor_l.get_action_mean_std(belief, posterior_state)
-    #     merge_action_list.append(actions_l_mean)
-    #     merge_action_list.append(actions_l_std)
-    #   merge_actions = torch.cat(merge_action_list, dim=1)
-    #   action = self.planner.get_merge_action(merge_actions, belief, posterior_state)
-    # elif args.algo == "planet":
-    #   action = self.planner(belief, posterior_state)  # Get action from planner(q(s_t|o≤t,a<t), p)
-    # elif args.algo == "actor_pool_1":
-    #   action = self.planner.get_action(belief, posterior_state, det=not (explore))
-    # else:
-    #   action = self.planner.get_action(belief, posterior_state, det=not (explore))
     return action
 
   def train_algorithm(self, actor_states, actor_beliefs):

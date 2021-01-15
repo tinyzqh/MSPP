@@ -18,8 +18,8 @@ class Worker_init_Sample(mp.Process):
       sub_datas.append((observation, action, reward, done))
       observation = next_observation
       t += 1
-      # if t == 20:
-      #   done = True
+      if t == 20:
+        done = True
     sub_datas.append(t)
     self.child_conn.send(sub_datas)
     self.child_conn.close()
