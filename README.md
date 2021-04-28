@@ -5,9 +5,9 @@
 
 <div align=center>
     <span class='gp-n'>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/acrobots-swingupFigure_1.png' width="320" alt="多尺度acrobots-swingup"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balanceFigure_1.png' width="320" alt="多尺度cartpole-balance"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/hopper-hopFigure_1.png' width="320" alt="多尺度hopper-hop"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/acrobots-swingupFigure_1.png' width="300" alt="多尺度acrobots-swingup"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balanceFigure_1.png' width="300" alt="多尺度cartpole-balance"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/hopper-hopFigure_1.png' width="300" alt="多尺度hopper-hop"/>
     </span>
 </div>
 
@@ -15,9 +15,9 @@
 
 <div align=center>
     <span class='gp-n'>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/acrobots-swingupall_algorithms_Figure_1.png' width="320" alt="多尺度acrobots-swingup"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balanceall_algorithms_Figure_1.png' width="320" alt="多尺度cartpole-balance"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/hopper-hopall_algorithms_Figure_1.png' width="320" alt="多尺度hopper-hop"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/acrobots-swingupall_algorithms_Figure_1.png' width="300" alt="多尺度acrobots-swingup"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balanceall_algorithms_Figure_1.png' width="300" alt="多尺度cartpole-balance"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/hopper-hopall_algorithms_Figure_1.png' width="300" alt="多尺度hopper-hop"/>
     </span>
 </div>
 
@@ -25,6 +25,6 @@
 
 <div align=center>
     <span class='gp-n'>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balance_aap_all_algorithms_Figure_1.png' width="320" alt="多尺度acrobots-swingup"/>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balance_aap_all_algorithms_Figure_1.png' width="300" alt="多尺度acrobots-swingup"/>
     </span>
 </div>
