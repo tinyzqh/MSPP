@@ -59,9 +59,9 @@ parser.add_argument('--action-scale', type=int, default=-1, metavar='TS', help='
 
 # ['cartpole-balance', 'cartpole-swingup', 'reacher-easy', 'finger-spin', 'cheetah-run', 'ball_in_cup-catch', 'walker-walk','reacher-hard', 'walker-run', 'humanoid-stand', 'humanoid-walk', 'fish-swim', 'acrobot-swingup']
 parser.add_argument('--seed', type=int, default=5, metavar='S', help='Random seed')
-parser.add_argument('--env', type=str, default='hopper-hop', choices=GYM_ENVS + CONTROL_SUITE_ENVS, help='Gym/Control Suite environment')
+parser.add_argument('--env', type=str, default='acrobot-swingup', choices=GYM_ENVS + CONTROL_SUITE_ENVS, help='Gym/Control Suite environment')
 parser.add_argument('--algo', type=str, default='aap', help='planet, dreamer, dreamer_two_repeat, p2p, actor_pool_1, aap')
-parser.add_argument('--pool_len', type=int, default=4, help='number of sub actor in actor_pool')
+parser.add_argument('--pool_len', type=int, default=3, help='number of sub actor in actor_pool')
 
 parser.add_argument('--batch-size', type=int, default=12, metavar='B', help='Batch size')
 parser.add_argument('--results_dir', type=str, default='some_error_happened', help="if the value == default, there may be some error")

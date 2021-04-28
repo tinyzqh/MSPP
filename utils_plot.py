@@ -60,13 +60,13 @@ class plot_multi_txt(object):
 			return all_algorithms_dir
 
 	def plot_multi_view(self):
-		sns.set(style="darkgrid", font_scale=1.5, font='serif', rc={'figure.figsize': (20, 8)})
+		sns.set(style="darkgrid", font_scale=1.5, font='serif', rc={'figure.figsize': (10, 16)})
 		all_algorithms_dir = self.get_files_path()
 		line_width = 2.3
 
 		# plt.title(self.root_path.split('/')[-1])
 
-		plt.subplot(121)
+		plt.subplot(211)
 		for dir in all_algorithms_dir:
 			self.all_files_path(rootDir=dir, file_name="train_rewards_episode.txt")  # get all txt files. -> saved in self.filepaths
 			x_data, y_data = self.get_data(self.filepaths)
@@ -87,9 +87,9 @@ class plot_multi_txt(object):
 		plt.xlabel("Environment Steps(x1000)")
 		# plt.title(self.root_path.split('/')[-1])
 		plt.xlim(-0.5, 900)
-		plt.ylim(-0.5, 1000)
+		plt.ylim(-0.5, 150)
 
-		plt.subplot(122)
+		plt.subplot(212)
 		for dir in all_algorithms_dir:
 			self.all_files_path(rootDir=dir, file_name="reward_loss_episode.txt")  # get all txt files. -> saved in self.filepaths
 			x_data, y_data = self.get_data(self.filepaths)
@@ -110,7 +110,7 @@ class plot_multi_txt(object):
 		plt.xlabel("Environment Steps(x1000)")
 		# plt.title(self.root_path.split('/')[-1])
 		plt.xlim(-0.5, 900)
-		plt.ylim(0, 0.005)
+		plt.ylim(0, 0.05)
 
 		plt.savefig('/home/hzq/' + self.root_path.split('/')[-1] + 'Figure_1.png')
 		plt.show()
@@ -132,12 +132,12 @@ class plot_multi_txt(object):
 			#     sns.tsplot(time=x_data, data=y_data, color='g', condition='action scale 2', err_style='ci_band', linestyle = ':',linewidth=line_width,estimator=np.median)
 			if dir.split('/')[-1] == 'planet':
 				l2 = sns.tsplot(time=x_data, data=y_data, color='teal', condition='PlaNet', linestyle='--', linewidth=line_width, estimator=np.median)
-			if dir.split('/')[-1] == 'aap2':
+			if dir.split('/')[-1] == 'p2p':
 				l3 = sns.tsplot(time=x_data, data=y_data, color='r', condition='EPN With 2 Sub-Agents', linestyle='-', linewidth=line_width, estimator=np.median)
-			if dir.split('/')[-1] == 'aap3':
+			if dir.split('/')[-1] == 'p2p3':
 				l4 = sns.tsplot(time=x_data, data=y_data, color='c', condition='EPN With 3 Sub-Agents', linestyle='--', linewidth=line_width, estimator=np.median)
-			# if dir.split('/')[-1] == 'aap4':
-			# 	l5 = sns.tsplot(time=x_data, data=y_data, color='g', condition='EPN With 4 Sub-Agents', linestyle=':', linewidth=line_width, estimator=np.median)
+			if dir.split('/')[-1] == 'p2p4':
+				l5 = sns.tsplot(time=x_data, data=y_data, color='g', condition='EPN With 4 Sub-Agents', linestyle=':', linewidth=line_width, estimator=np.median)
 
 			self.filepaths = []  # clear -> self.filepaths
 
@@ -146,8 +146,9 @@ class plot_multi_txt(object):
 		plt.title(self.root_path.split('/')[-1])
 
 		plt.xlim(-0.5, 900)
-		plt.ylim(-0.5, 1000)
+		plt.ylim(-0.5, 200)
 		# plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+		plt.savefig('/home/hzq/' + self.root_path.split('/')[-1] + 'all_algorithms_Figure_1.png')
 		# plt.savefig('/home/hzq/Figure_2.png')
 		# plt.legend(handles=[l1, l2, l3, l4, l5],
 		#            labels=['Dreamer', 'PlaNet', 'EPN With 2 Sub-Agents', 'EPN With 3 Sub-Agents',
@@ -192,13 +193,13 @@ class plot_multi_txt(object):
 
 def main():
 	# cartpole-balance; hopper-hop; acrobots-swingup
-	# plot_multi_txt(root_path="/home/hzq/data-hzq/hopper-hop").plot_all_algorithms_data()
+	# plot_multi_txt(root_path="/home/hzq/final-datas/acrobots-swingup").plot_all_algorithms_data()
 
-	# plot_multi_txt(root_path="/home/hzq/data-hzq/cartpole-balance").plot_multi_view()
-
+	# plot_multi_txt(root_path="/home/hzq/data-hzq/acrobots-swingup").plot_multi_view()
+	#
 	instantiation = plot_single_txts()
 	# all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/EPN_1/results/cartpole-balance_seed_5_aap_action_scale_1_no_explore_3_pool_len_10_optimisation_iters_8_top_planning-horizon")
-	all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/EPN_1/results/hopper-hop_seed_5_aap_action_scale_1_no_explore_3_pool_len_10_optimisation_iters_8_top_planning-horizon")
+	all_txt_path = instantiation.get_all_txt_filename(root_path="/home/hzq/EPN_1/results/acrobot-swingup_seed_1_aap_action_scale_-1_no_explore_2_pool_len_10_optimisation_iters_8_top_planning-horizon")
 	instantiation.process_txts(all_txt_path)
 
 
