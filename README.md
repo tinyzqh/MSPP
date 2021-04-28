@@ -22,3 +22,9 @@
 </div>
 
 - 第二种融合多个尺度策略的算法效果图，与基于模型的SOTA算法Dreamer对比
+
+<div align=center>
+    <span class='gp-n'>
+        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balance_aap_all_algorithms_Figure_1.png' width="320" alt="多尺度acrobots-swingup"/>
+    </span>
+</div>
