@@ -1,6 +1,6 @@
 # Erlang planning network
 
-This is the implementation of the paper "Erlang planning network: An iterative model-based reinforcement learning with multi-perspective".
+This is the implementation of the paper ["Erlang planning network: An iterative model-based reinforcement learning with multi-perspective"](https://www.sciencedirect.com/science/article/abs/pii/S0031320322001492).
 
 
 - Result in different views.
