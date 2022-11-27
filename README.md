@@ -1,7 +1,9 @@
-# Kagebunsin-no-jyutu
+# Erlang planning network
+
+This is the implementation of the paper "Erlang planning network: An iterative model-based reinforcement learning with multi-perspective".
 
 
-- 不同尺度下的控制效果，以及奖励LOSS收敛图。
+- Result in different views.
 
 <div align=center>
     <span class='gp-n'>
@@ -11,7 +13,7 @@
     </span>
 </div>
 
-- 第一种融合多个尺度策略的算法效果图，与基于模型的SOTA算法Dreamer对比
+- The result diagram of the first algorithm fusing multiple scale strategies, compared with Dreamer, a model-based sota algorithm.
 
 <div align=center>
     <span class='gp-n'>
@@ -21,7 +23,7 @@
     </span>
 </div>
 
-- 第二种融合多个尺度策略的算法效果图，与基于模型的SOTA算法Dreamer对比
+- The result diagram of the second algorithm fusing multiple scale strategies, compared with Dreamer, a model-based sota algorithm.
 
 <div align=center>
     <span class='gp-n'>
