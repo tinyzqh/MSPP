@@ -25,9 +25,9 @@ To use the Erlang Planning Network algorithm and MSPP, you need to have Python 3
 
 <div align=center>
     <span class='gp-n'>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/acrobots-swingupFigure_1.png' width="250" alt="多尺度acrobots-swingup"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balanceFigure_1.png' width="250" alt="多尺度cartpole-balance"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/hopper-hopFigure_1.png' width="250" alt="多尺度hopper-hop"/>
+        <img src='https://github.com/tinyzqh/MSPP/blob/master/figures/acrobots-swingupFigure_1.png' width="250" alt="多尺度acrobots-swingup"/>
+        <img src='https://github.com/tinyzqh/MSPP/blob/master/figures/cartpole-balanceFigure_1.png' width="250" alt="多尺度cartpole-balance"/>
+        <img src='https://github.com/tinyzqh/MSPP/blob/master/figures/hopper-hopFigure_1.png' width="250" alt="多尺度hopper-hop"/>
     </span>
 </div>
 
@@ -35,9 +35,9 @@ To use the Erlang Planning Network algorithm and MSPP, you need to have Python 3
 
 <div align=center>
     <span class='gp-n'>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/acrobots-swingupall_algorithms_Figure_1.png' width="250" alt="多尺度acrobots-swingup"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/cartpole-balanceall_algorithms_Figure_1.png' width="250" alt="多尺度cartpole-balance"/>
-        <img src='https://github.com/tinyzqh/Kagebunsin-no-jyutu/blob/master/figures/hopper-hopall_algorithms_Figure_1.png' width="250" alt="多尺度hopper-hop"/>
+        <img src='https://github.com/tinyzqh/MSPP/blob/master/figures/acrobots-swingupall_algorithms_Figure_1.png' width="250" alt="多尺度acrobots-swingup"/>
+        <img src='https://github.com/tinyzqh/MSPP/blob/master/figures/cartpole-balanceall_algorithms_Figure_1.png' width="250" alt="多尺度cartpole-balance"/>
+        <img src='https://github.com/tinyzqh/MSPP/blob/master/figures/hopper-hopall_algorithms_Figure_1.png' width="250" alt="多尺度hopper-hop"/>
     </span>
 </div>
 
