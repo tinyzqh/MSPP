@@ -1,8 +1,8 @@
 # Erlang planning network & MSPP
 
-Official implementation of "Understanding world models through multi-step pruning policy via reinforcement learning" in Information Sciences.
+# Official implementation of "Understanding world models through multi-step pruning policy via reinforcement learning" in Information Sciences.
 
-Official implementation of "Erlang planning network: An iterative model-based reinforcement learning with multi-perspective" in Pattern Recognition.
+# Official implementation of "Erlang planning network: An iterative model-based reinforcement learning with multi-perspective" in Pattern Recognition.
 
 ## Introduction
 
