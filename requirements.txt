@@ -1,0 +1,24 @@
+# Core training dependencies for MSPP / Erlang Planning Network.
+# Verified on Python 3.10 – 3.12 with the versions below or newer.
+
+# ── Deep learning ─────────────────────────────────────────────────────────
+torch>=1.10
+torchvision>=0.11
+
+# ── Numerics & vision I/O ─────────────────────────────────────────────────
+numpy>=1.21
+opencv-python>=4.5
+
+# ── Logging / progress ────────────────────────────────────────────────────
+tensorboardX>=2.4
+tqdm>=4.50
+plotly>=5.0
+
+# ── Environments ──────────────────────────────────────────────────────────
+# DeepMind Control Suite (pulls in mujoco, dm-env, dm-tree automatically).
+dm_control>=1.0.10
+
+# OpenAI Gym envs are optional. Uncomment ONE of the following if you want
+# to train on the Gym-style envs listed in env.py (Pendulum-v0, Ant-v2, ...):
+#   gym==0.21.0                         # original API used by the paper
+#   gymnasium[classic-control]>=0.29    # modern fork, needs minor edits in env.py

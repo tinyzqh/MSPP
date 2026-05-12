@@ -6,7 +6,6 @@ from env import CONTROL_SUITE_ENVS, Env, GYM_ENVS, EnvBatcher
 from typing import Iterable
 from torch.nn import Module
 from parameter import args
-import pandas as pd
 import torch.multiprocessing as mp
 from utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters, get_modules
 from models import bottle
@@ -103,24 +102,32 @@ class Worker_actor(mp.Process):
 		self.losses = []
 
 	def run(self) -> None:
-		# print("children process {} waiting to get data".format(self.process_id))
-		# Run = self.child_conn.recv()
-		# print("children process {} Geted data form parent".format(self.process_id))
+		# args.device is set on the *parent* process Namespace and is NOT visible
+		# inside spawned workers (parameter.py re-runs argparse on import). Compute
+		# the device locally from args.disable_cuda (which IS in the Namespace).
+		device = torch.device('cuda' if torch.cuda.is_available() and not args.disable_cuda else 'cpu')
 		actor_loss, value_loss = None, None
-		while self.child_conn.recv() == 1:
-			# print("Start Multi actor-critic Processing, The Process ID is {} -------------------------------".format(self.process_id))
+		while True:
+			msg = self.child_conn.recv()
+			# Sentinel 0 / None / "stop" signals graceful shutdown.
+			if msg is None or (isinstance(msg, int) and msg == 0) or msg == "stop":
+				break
+			# Backwards-compat: a bare 1 means "no data attached" — keep the worker
+			# alive but skip this round (should not happen in the current protocol).
+			if isinstance(msg, int) and msg == 1:
+				self.child_conn.send(1)
+				continue
+			actor_states_in, actor_beliefs_in = msg
+
 			for _ in range(args.sub_traintime):
 				with FreezeParameters(self.env_model_modules):
-					actor_states = torch.load(os.path.join(os.getcwd(), self.results_dir + '/actor_states.pt'))
-					actor_beliefs = torch.load(os.path.join(os.getcwd(), self.results_dir + '/actor_beliefs.pt'))
-					actor_states = actor_states.cuda() if torch.cuda.is_available() and not args.disable_cuda else actor_states.cpu()
-					actor_beliefs = actor_beliefs.cuda() if torch.cuda.is_available() and not args.disable_cuda else actor_beliefs.cpu()
+					actor_states = actor_states_in.to(device)
+					actor_beliefs = actor_beliefs_in.to(device)
 
 					imagination_traj = imagine_ahead(actor_states, actor_beliefs, self.actor_l, self.transition_model, args.planning_horizon, action_scale=self.process_id)
 
 				imged_beliefs, imged_prior_states, imged_prior_means, imged_prior_std_devs = imagination_traj
 
-				# Update model parameters
 				with FreezeParameters(self.env_model_modules + self.value_model_l_modules):
 					imged_reward = bottle(self.reward_model, (imged_beliefs, imged_prior_states))
 					value_pred = bottle(self.value_l, (imged_beliefs, imged_prior_states))
@@ -128,26 +135,18 @@ class Worker_actor(mp.Process):
 				returns = lambda_return(imged_reward, value_pred, bootstrap=value_pred[-1], discount=args.discount, lambda_=args.disclam)
 				actor_loss = -torch.mean(returns)
 
-				# calculate local gradients and push local parameters to global
 				self.actor_optimizer_l.zero_grad()
 				actor_loss.backward()
 				nn.utils.clip_grad_norm_(self.actor_l.parameters(), args.grad_clip_norm, norm_type=2)
-				# for la, ga in zip(self.actor_l.parameters(), self.actor_g.parameters()):
-				#     ga._grad = la.grad
 				self.actor_optimizer_l.step()
 
-				# push global parameters
-				# self.actor_l.load_state_dict(self.actor_g.state_dict())
-
-				# Dreamer implementation: value loss calculation and optimization
 				with torch.no_grad():
 					value_beliefs = imged_beliefs.detach()
 					value_prior_states = imged_prior_states.detach()
 					target_return = returns.detach()
 
-				value_dist = Normal(bottle(self.value_l, (value_beliefs, value_prior_states)), 1)  # detach the input tensor from the transition network.
+				value_dist = Normal(bottle(self.value_l, (value_beliefs, value_prior_states)), 1)
 				value_loss = -value_dist.log_prob(target_return).mean(dim=(0, 1))
-				# Update model parameters
 				self.value_optimizer_l.zero_grad()
 				value_loss.backward()
 				nn.utils.clip_grad_norm_(self.value_l.parameters(), args.grad_clip_norm, norm_type=2)
@@ -165,7 +164,5 @@ class Worker_actor(mp.Process):
 				self.losses = []
 				self.metrics['episodes'].append(self.metrics['episodes'][-1] + 1)
 			self.count += 1
-
-			# print("End Multi actor-critic Processing, The Process ID is {} -------------------------------".format(self.process_id))
 
 			self.child_conn.send(1)

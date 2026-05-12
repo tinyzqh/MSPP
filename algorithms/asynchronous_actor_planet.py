@@ -1,31 +1,17 @@
-import torch.nn as nn
-from parameter import args
-from torch import jit
-import torch
-from parameter import args
-import torch
-import os
-from torch import nn, optim
-from torch.nn import functional as F
-from parameter import args
-from models import bottle, Encoder, ObservationModel, RewardModel, TransitionModel, ValueModel, ActorModel, MergeModel
-from utils import lineplot, write_video, imagine_ahead, lambda_return, FreezeParameters, Save_Txt, ActivateParameters, get_modules
-from torch.distributions import Normal
-from asynchronous_init_sample import Worker_init_Sample
-from torch.multiprocessing import Pipe, Manager
-from asynchronous_actor import Worker_actor
-from typing import Optional, List
-import torch
-import time
-from torch import jit, nn
-from torch.nn import functional as F
-import torch.distributions
-from torch.distributions.normal import Normal
-from torch.distributions import constraints
-from torch.distributions.transforms import Transform, TanhTransform
-from torch.distributions.transformed_distribution import TransformedDistribution
 import numpy as np
+import torch
+import torch.distributions
+import torch.nn as nn
+from torch.nn import functional as F
+from torch.distributions import constraints
+from torch.distributions.normal import Normal
+from torch.distributions.transformed_distribution import TransformedDistribution
+from torch.multiprocessing import Pipe
+
+from asynchronous_actor import Worker_actor
+from models import ActorModel, ValueModel
 from parameter import args
+from utils import get_modules
 
 
 # Model-predictive control planner with cross-entropy method and learned transition model
@@ -41,10 +27,13 @@ class MPCPlanner(nn.Module):
 		self.candidates, self.top_candidates = candidates, top_candidates
 
 	def upper_transition_model(self, prev_state, actions, prev_belief, obs=None, nonterminals=None):
-		actions = torch.transpose(actions, 0, 1) if args.MultiGPU and torch.cuda.device_count() > 1 else actions
-		nonterminals = torch.transpose(nonterminals, 0, 1).cuda() if args.MultiGPU and torch.cuda.device_count() > 1 and nonterminals is not None else nonterminals
-		obs = torch.transpose(obs, 0, 1).cuda() if args.MultiGPU and torch.cuda.device_count() > 1 and obs is not None else obs
-		temp_val = self.transition_model(prev_state.cuda(), actions.cuda(), prev_belief.cuda(), obs, nonterminals)
+		if args.MultiGPU and torch.cuda.device_count() > 1:
+			actions = torch.transpose(actions, 0, 1).to(args.device)
+			if nonterminals is not None:
+				nonterminals = torch.transpose(nonterminals, 0, 1).to(args.device)
+			if obs is not None:
+				obs = torch.transpose(obs, 0, 1).to(args.device)
+		temp_val = self.transition_model(prev_state.to(args.device), actions.to(args.device), prev_belief.to(args.device), obs, nonterminals)
 		return list(map(lambda x: x.view(-1, prev_state.shape[0], x.shape[2]), [x for x in temp_val]))
 
 	# @jit.script_method
@@ -202,28 +191,48 @@ class Algorithms(MPCPlanner):
 			# Update belief with new means and standard deviations
 			action_mean, action_std_dev = best_actions.mean(dim=2, keepdim=True), best_actions.std(dim=2, unbiased=False, keepdim=True)
 
-		# Return sample action from distribution
-
-		dist = Normal(action_mean[0].squeeze(dim=1), action_std_dev[0].squeeze(dim=1))
+		# Return sample action from distribution. Clamp std away from zero — when
+		# top-K elites collapse, std collapses to 0 and modern PyTorch's
+		# `Normal(loc, scale=0)` rejects the parameter.
+		safe_std = action_std_dev[0].squeeze(dim=1).clamp(min=1e-6)
+		dist = Normal(action_mean[0].squeeze(dim=1), safe_std)
 		dist = TransformedDistribution(dist, TanhBijector())
 		dist = torch.distributions.Independent(dist, 1)
 		dist = SampleDist(dist)
 		if det:
-			tmp = dist.mode()
-			return tmp
-		else:
-			tmp = dist.rsample()
-			return tmp
-		# action_true = action_mean[0].squeeze(dim=1)
-		# return action_true
-
-		# action = self.planner(belief, posterior_state)  # Get action from planner(q(s_t|o≤t,a<t), p)
-		# return action
+			return dist.mode()
+		return dist.rsample()
 
 	def train_algorithm(self, actor_states, actor_beliefs):
-		# "the planet no train step"
-		[self.actor_pipes[i][0].send(1) for i, w in enumerate(self.workers_actor)]  # Parent_pipe send data using i'th pipes
-		[self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
+		# Hand the state/belief tensors to each worker over its pipe. PyTorch
+		# serializes via shared memory (CPU) or CUDA IPC (GPU) automatically.
+		payload = (actor_states.cpu(), actor_beliefs.cpu())
+		for parent, _ in self.actor_pipes:
+			parent.send(payload)
+		for parent, _ in self.actor_pipes:
+			parent.recv()
+
+	def shutdown(self):
+		"""Cleanly terminate all actor workers."""
+		for parent, _ in self.actor_pipes:
+			try:
+				parent.send(0)
+			except Exception:
+				pass
+		for w in self.workers_actor:
+			w.join(timeout=5)
+
+	def get_state_dict(self):
+		return {
+			'actor_pool': [a.state_dict() for a in self.actor_pool],
+			'value_pool': [v.state_dict() for v in self.value_pool],
+		}
+
+	def load_state_dict(self, state):
+		for a, sd in zip(self.actor_pool, state.get('actor_pool', [])):
+			a.load_state_dict(sd)
+		for v, sd in zip(self.value_pool, state.get('value_pool', [])):
+			v.load_state_dict(sd)
 
 	# def train_algorithm1(self, actor_states, actor_beliefs) -> None:
 	# 	# print("children process {} waiting to get data".format(self.process_id))
@@ -312,8 +321,8 @@ class TanhBijector(torch.distributions.Transform):
 	def __init__(self):
 		super().__init__()
 		self.bijective = True
-		self.domain = constraints.Constraint()
-		self.codomain = constraints.Constraint()
+		self.domain = constraints.real
+		self.codomain = constraints.interval(-1.0, 1.0)
 
 	@property
 	def sign(self): return 1.
@@ -344,6 +353,7 @@ class SampleDist:
 		return getattr(self._dist, name)
 
 	def mean(self):
+		dist = self._dist.expand((self._samples, *self._dist.batch_shape))
 		sample = dist.rsample()
 		return torch.mean(sample, 0)
 

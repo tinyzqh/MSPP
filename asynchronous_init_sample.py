@@ -12,7 +12,11 @@ class Worker_init_Sample(mp.Process):
 
 	def run(self) -> None:
 		sub_datas = self.child_conn.recv()
-		env = Env(args.env, args.symbolic_env, args.seed, args.max_episode_length, args.action_repeat, args.bit_depth)
+		# Each seed worker must use a distinct seed; otherwise all "random" seed
+		# episodes are identical trajectories and the buffer effectively contains
+		# a single episode replicated args.seed_episodes times.
+		worker_seed = args.seed + self.process_id
+		env = Env(args.env, args.symbolic_env, worker_seed, args.max_episode_length, args.action_repeat, args.bit_depth)
 		observation, done, t = env.reset(), False, 0
 		while not done:
 			action = env.sample_random_action()

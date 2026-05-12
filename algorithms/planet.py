@@ -21,7 +21,7 @@ class MPCPlanner(nn.Module):
 		actions = torch.transpose(actions, 0, 1) if args.MultiGPU and torch.cuda.device_count() > 1 else actions
 		nonterminals = torch.transpose(nonterminals, 0, 1).cuda() if args.MultiGPU and torch.cuda.device_count() > 1 and nonterminals is not None else nonterminals
 		obs = torch.transpose(obs, 0, 1).cuda() if args.MultiGPU and torch.cuda.device_count() > 1 and obs is not None else obs
-		temp_val = self.transition_model(prev_state.cuda(), actions.cuda(), prev_belief.cuda(), obs, nonterminals)
+		temp_val = self.transition_model(prev_state.to(args.device), actions.to(args.device), prev_belief.to(args.device), obs, nonterminals)
 		return list(map(lambda x: x.view(-1, prev_state.shape[0], x.shape[2]), [x for x in temp_val]))
 
 	# @jit.script_method

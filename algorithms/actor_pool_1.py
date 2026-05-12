@@ -1,4 +1,4 @@
-from dreamer.algorithms.plan_to_plan import Algorithms
+from algorithms.plan_to_plan import Algorithms
 
 
 class Algorithms_actor(Algorithms):

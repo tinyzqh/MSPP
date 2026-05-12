@@ -1,0 +1,50 @@
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtual envs ──────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+.conda/
+
+# ── IDE / editors ─────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ── Training artefacts ────────────────────────────────────────────────────
+# All per-run output (checkpoints, loss txt, tensorboard logs, videos)
+results/
+
+# Stand-alone checkpoint / replay files in case someone exports them outside
+# the results/ tree.
+*.pth
+*.pt
+*.ckpt
+experience.pth
+
+# Tensorboard / SummaryWriter
+runs/
+events.out.tfevents.*
+*.tfevents.*
+
+# Rendered videos and frames from test()
+*.mp4
+*.avi
+test_episode_*.png
+
+# ── Logs ──────────────────────────────────────────────────────────────────
+*.log
+/tmp/mspp_*.log
+
+# ── Plotly HTML output from utils.lineplot ────────────────────────────────
+*.html

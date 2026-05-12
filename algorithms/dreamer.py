@@ -29,10 +29,8 @@ class Algorithms(object):
 		return action
 
 	def train_algorithm(self, actor_states, actor_beliefs):
-
-
-		actor_states = torch.load(os.path.join(os.getcwd(), args.results_dir + '/actor_states.pt'))
-		actor_beliefs = torch.load(os.path.join(os.getcwd(), args.results_dir + '/actor_beliefs.pt'))
+		actor_states = actor_states.to(args.device)
+		actor_beliefs = actor_beliefs.to(args.device)
 
 		with FreezeParameters(self.env_model_modules):
 			imagination_traj = imagine_ahead(actor_states, actor_beliefs, self.actor_model, self.transition_model, args.planning_horizon, args.action_scale)
@@ -84,3 +82,17 @@ class Algorithms(object):
 	def eval_to_train(self):
 		self.actor_model.train()
 		self.value_model.train()
+
+	def get_state_dict(self):
+		return {
+			'actor_model': self.actor_model.state_dict(),
+			'value_model': self.value_model.state_dict(),
+			'actor_optimizer': self.actor_optimizer.state_dict(),
+			'value_optimizer': self.value_optimizer.state_dict(),
+		}
+
+	def load_state_dict(self, state):
+		self.actor_model.load_state_dict(state['actor_model'])
+		self.value_model.load_state_dict(state['value_model'])
+		self.actor_optimizer.load_state_dict(state['actor_optimizer'])
+		self.value_optimizer.load_state_dict(state['value_optimizer'])

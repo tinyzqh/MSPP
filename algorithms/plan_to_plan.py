@@ -64,8 +64,11 @@ class Algorithms(object):
 
 	def train_algorithm(self, actor_states, actor_beliefs):
 
-		[self.actor_pipes[i][0].send(1) for i, w in enumerate(self.workers_actor)]  # Parent_pipe send data using i'th pipes
-		[self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
+		payload = (actor_states.cpu(), actor_beliefs.cpu())
+		for parent, _ in self.actor_pipes:
+			parent.send(payload)
+		for parent, _ in self.actor_pipes:
+			parent.recv()
 
 		with FreezeParameters(self.model_modules):
 			imagination_traj = self.imagine_merge_ahead(prev_state=actor_states, prev_belief=actor_beliefs, policy_pool=self.actor_pool, transition_model=self.transition_model, merge_model=self.merge_actor_model)
@@ -165,3 +168,30 @@ class Algorithms(object):
 		[value_model.train() for value_model in self.value_pool]
 		self.merge_actor_model.train()
 		self.merge_value_model.train()
+
+	def shutdown(self):
+		for parent, _ in self.actor_pipes:
+			try:
+				parent.send(0)
+			except Exception:
+				pass
+		for w in self.workers_actor:
+			w.join(timeout=5)
+
+	def get_state_dict(self):
+		return {
+			'actor_pool': [a.state_dict() for a in self.actor_pool],
+			'value_pool': [v.state_dict() for v in self.value_pool],
+			'merge_actor': self.merge_actor_model.state_dict(),
+			'merge_value': self.merge_value_model.state_dict(),
+		}
+
+	def load_state_dict(self, state):
+		for a, sd in zip(self.actor_pool, state.get('actor_pool', [])):
+			a.load_state_dict(sd)
+		for v, sd in zip(self.value_pool, state.get('value_pool', [])):
+			v.load_state_dict(sd)
+		if 'merge_actor' in state:
+			self.merge_actor_model.load_state_dict(state['merge_actor'])
+		if 'merge_value' in state:
+			self.merge_value_model.load_state_dict(state['merge_value'])

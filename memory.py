@@ -31,11 +31,21 @@ class ExperienceReplay():
 
 	# Returns an index for a valid single sequence chunk uniformly sampled from the memory
 	def _sample_idx(self, L):
+		# Guard: if the buffer holds fewer than L transitions we can't produce a
+		# chunk of length L. Raise a clear error instead of letting np.random.randint
+		# crash with `low >= high`.
+		available = self.size if self.full else self.idx
+		if available < L:
+			raise ValueError(
+				f"ExperienceReplay has only {available} transitions but a chunk of length {L} was requested; "
+				f"collect more seed episodes (current seed_episodes setting may be too small)."
+			)
+		high = self.size if self.full else self.idx - L + 1
 		valid_idx = False
 		while not valid_idx:
-			idx = np.random.randint(0, self.size if self.full else self.idx - L)
+			idx = np.random.randint(0, high)
 			idxs = np.arange(idx, idx + L) % self.size
-			valid_idx = not self.idx in idxs[1:]  # Make sure data does not cross the memory index
+			valid_idx = self.idx not in idxs[1:]  # Make sure data does not cross the memory index
 		return idxs
 
 	def _retrieve_batch(self, idxs, n, L):

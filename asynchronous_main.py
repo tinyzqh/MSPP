@@ -20,6 +20,11 @@ from asynchronous_init_sample import Worker_init_Sample
 from torch.multiprocessing import Pipe, Manager
 
 
+def _strip_dp(model):
+	"""Return the underlying module if `model` is wrapped in DataParallel, else the model itself."""
+	return model.module if isinstance(model, nn.DataParallel) else model
+
+
 class Plan(object):
 
 	def __init__(self):
@@ -99,16 +104,20 @@ class Plan(object):
 		self.free_nats = torch.full((1,), args.free_nats, device=args.device)  # Allowed deviation in KL divergence
 
 		# Training (and testing)
-		# args.episodes = 1
-		for episode in tqdm(range(self.metrics['episodes'][-1] + 1, args.episodes + 1), total=args.episodes, initial=self.metrics['episodes'][-1] + 1):
+		start_episode = self.metrics['episodes'][-1] + 1
+		for episode in tqdm(range(start_episode, args.episodes + 1),
+							total=args.episodes - start_episode + 1,
+							desc='episodes'):
 			losses = self.train()
-			# self.algorithms.save_loss_data(self.metrics['episodes']) # Update and plot loss metrics
 			self.save_loss_data(tuple(zip(*losses)))  # Update and plot loss metrics
 			self.data_collection(episode=episode)  # Data collection
-			# args.test_interval = 1
 			if episode % args.test_interval == 0: self.test(episode=episode)  # Test model
 			self.save_model_data(episode=episode)  # save model
 
+		# Final checkpoint to guarantee state is persisted even if the loop never
+		# hit a checkpoint_interval boundary.
+		self.save_model_data(episode=args.episodes, force=True)
+		self.shutdown_workers()
 		self.env.close()  # Close training environment
 
 	def train_env_model(self, beliefs, prior_states, prior_means, prior_std_devs, posterior_states, posterior_means, posterior_std_devs, observations, actions, rewards, nonterminals):
@@ -191,27 +200,14 @@ class Plan(object):
 			# Calculate observation likelihood, reward likelihood and KL losses (for t = 0 only for latent overshooting); sum over final dims, average over batch and time (original implementation, though paper seems to miss 1/T scaling?)
 			observation_loss, reward_loss, kl_loss = self.train_env_model(beliefs, prior_states, prior_means, prior_std_devs, posterior_states, posterior_means, posterior_std_devs, observations, actions, rewards, nonterminals)
 
-			# Dreamer implementation: actor loss calculation and optimization
+			# Hand actor training data to the algorithm. Tensors travel over the
+			# multiprocessing pipe (auto-IPC); no disk round-trip needed.
 			with torch.no_grad():
-				actor_states = posterior_states.detach().to(device=args.device).share_memory_()
-				actor_beliefs = beliefs.detach().to(device=args.device).share_memory_()
-
-
-			# if not os.path.exists(os.path.join(os.getcwd(), 'tensor_data/' + args.results_dir)): os.mkdir(os.path.join(os.getcwd(), 'tensor_data/' + args.results_dir))
-			torch.save(actor_states, os.path.join(os.getcwd(), args.results_dir + '/actor_states.pt'))
-			torch.save(actor_beliefs, os.path.join(os.getcwd(), args.results_dir + '/actor_beliefs.pt'))
-
-			# [self.actor_pipes[i][0].send(1) for i, w in enumerate(self.workers_actor)]  # Parent_pipe send data using i'th pipes
-			# [self.actor_pipes[i][0].recv() for i, _ in enumerate(self.actor_pool)]  # waitting the children finish
+				actor_states = posterior_states.detach()
+				actor_beliefs = beliefs.detach()
 
 			self.algorithms.train_algorithm(actor_states, actor_beliefs)
 			losses.append([observation_loss.item(), reward_loss.item(), kl_loss.item()])
-
-			# if self.algorithms.train_algorithm(actor_states, actor_beliefs) is not None:
-			#   merge_actor_loss, merge_value_loss = self.algorithms.train_algorithm(actor_states, actor_beliefs)
-			#   losses.append([observation_loss.item(), reward_loss.item(), kl_loss.item(), merge_actor_loss.item(), merge_value_loss.item()])
-			# else:
-			#   losses.append([observation_loss.item(), reward_loss.item(), kl_loss.item()])
 
 		return losses
 
@@ -221,9 +217,9 @@ class Plan(object):
 			observation, total_reward = self.env.reset(), 0
 			belief, posterior_state, action = torch.zeros(1, args.belief_size, device=args.device), torch.zeros(1, args.state_size, device=args.device), torch.zeros(1, self.env.action_size, device=args.device)
 			pbar = tqdm(range(args.max_episode_length // args.action_repeat))
+			t = 0
 			for t in pbar:
-				# print("step",t)
-				belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(device=args.device))
+				belief, posterior_state, action, next_observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(device=args.device), explore=True)
 				self.D.append(observation, action.cpu(), reward, done)
 				total_reward += reward
 				observation = next_observation
@@ -232,13 +228,13 @@ class Plan(object):
 					pbar.close()
 					break
 
-			# Update and plot train reward metrics
-			self.metrics['steps'].append(t + self.metrics['steps'][-1])
+			# Update and plot train reward metrics. Steps cumulate in env-frame units
+			# (t * action_repeat) to match __init_sample's accounting.
+			self.metrics['steps'].append(t * args.action_repeat + self.metrics['steps'][-1])
 			self.metrics['episodes'].append(episode)
 			self.metrics['train_rewards'].append(total_reward)
 
 			Save_Txt(self.metrics['episodes'][-1], self.metrics['train_rewards'][-1], 'train_rewards', args.results_dir)
-			# lineplot(metrics['episodes'][-len(metrics['train_rewards']):], metrics['train_rewards'], 'train_rewards', results_dir)
 
 	def test(self, episode):
 		print("Test model")
@@ -307,7 +303,7 @@ class Plan(object):
 				belief, posterior_state, action = torch.zeros(1, args.belief_size, device=args.device), torch.zeros(1, args.state_size, device=args.device), torch.zeros(1, self.env.action_size, device=args.device)
 				pbar = tqdm(range(args.max_episode_length // args.action_repeat))
 				for t in pbar:
-					belief, posterior_state, action, observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(evice=args.device))
+					belief, posterior_state, action, observation, reward, done = self.update_belief_and_act(args, self.env, belief, posterior_state, action, observation.to(device=args.device))
 					total_reward += reward
 					if args.render: self.env.render()
 					if done:
@@ -327,6 +323,9 @@ class Plan(object):
 		os.makedirs(args.results_dir, exist_ok=True)
 		np.random.seed(args.seed)
 		torch.manual_seed(args.seed)
+		# Determinism (best-effort; cuDNN may still be non-deterministic for some ops).
+		torch.backends.cudnn.deterministic = True
+		torch.backends.cudnn.benchmark = False
 		# Set Cuda
 		if torch.cuda.is_available() and not args.disable_cuda:
 			print("using CUDA")
@@ -342,7 +341,7 @@ class Plan(object):
 		self.metrics = {'steps': [], 'episodes': [], 'train_rewards': [], 'test_episodes': [], 'test_rewards': [], 'observation_loss': [], 'reward_loss': [], 'kl_loss': [], 'merge_actor_loss': [], 'merge_value_loss': []}
 
 	def __init_sample(self):
-		if args.experience_replay is not '' and os.path.exists(args.experience_replay):
+		if args.experience_replay != '' and os.path.exists(args.experience_replay):
 			self.D = torch.load(args.experience_replay)
 			self.metrics['steps'], self.metrics['episodes'] = [self.D.steps] * self.D.episodes, list(range(1, self.D.episodes + 1))
 		elif not args.test:
@@ -351,8 +350,9 @@ class Plan(object):
 			# Initialise dataset D with S random seed episodes
 			print("Start Multi Sample Processing -------------------------------")
 			start_time = time.time()
-			data_lists = [Manager().list() for i in range(1, args.seed_episodes + 1)]  # Set Global Lists
-			pipes = [Pipe() for i in range(1, args.seed_episodes + 1)]  # Set Multi Pipe
+			manager = Manager()  # Single Manager process shared by all seed workers
+			data_lists = [manager.list() for _ in range(args.seed_episodes)]
+			pipes = [Pipe() for _ in range(args.seed_episodes)]
 			workers_init_sample = [Worker_init_Sample(child_conn=child, id=i + 1) for i, [parent, child] in enumerate(pipes)]
 
 			for i, w in enumerate(workers_init_sample):
@@ -360,26 +360,31 @@ class Plan(object):
 				pipes[i][0].send(data_lists[i])  # Parent_pipe send data using i'th pipes
 			[w.join() for w in workers_init_sample]  # wait sub_process done
 
+			episode_counter = 0
 			for i, [parent, child] in enumerate(pipes):
-				# datas = parent.recv()
+				episode_counter += 1
 				for data in list(parent.recv()):
 					if isinstance(data, tuple):
 						assert len(data) == 4
 						self.D.append(data[0], data[1], data[2], data[3])
 					elif isinstance(data, int):
 						t = data
-						self.metrics['steps'].append(t * args.action_repeat + (0 if len(self.metrics['steps']) == 0 else self.metrics['steps'][-1]))
-						self.metrics['episodes'].append(i + 1)
+						prev_steps = self.metrics['steps'][-1] if self.metrics['steps'] else 0
+						self.metrics['steps'].append(t * args.action_repeat + prev_steps)
+						self.metrics['episodes'].append(episode_counter)
 					else:
-						print("The Recvive Data Have Some Problems, Need To Fix")
+						print("The Receive Data Have Some Problems, Need To Fix")
 			end_time = time.time()
 			print("the process times {} s".format(end_time - start_time))
 			print("End Multi Sample Processing -------------------------------")
 
 	def upper_transition_model(self, prev_state, actions, prev_belief, obs, nonterminals):
-		actions = torch.transpose(actions, 0, 1) if args.MultiGPU else actions
-		nonterminals = torch.transpose(nonterminals, 0, 1).to(device=args.device) if args.MultiGPU and nonterminals is not None else nonterminals
-		obs = torch.transpose(obs, 0, 1).to(device=args.device) if args.MultiGPU and obs is not None else obs
+		if args.MultiGPU:
+			actions = torch.transpose(actions, 0, 1).to(device=args.device)
+			if nonterminals is not None:
+				nonterminals = torch.transpose(nonterminals, 0, 1).to(device=args.device)
+			if obs is not None:
+				obs = torch.transpose(obs, 0, 1).to(device=args.device)
 		temp_val = self.transition_model(prev_state.to(device=args.device), actions.to(device=args.device), prev_belief.to(device=args.device), obs, nonterminals)
 
 		return list(map(lambda x: torch.cat(x.chunk(torch.cuda.device_count(), 0), 1) if x.shape[1] != prev_state.shape[0] else x, [x for x in temp_val]))
@@ -388,45 +393,32 @@ class Plan(object):
 		self.metrics['observation_loss'].append(losses[0])
 		self.metrics['reward_loss'].append(losses[1])
 		self.metrics['kl_loss'].append(losses[2])
-		self.metrics['merge_actor_loss'].append(losses[3]) if losses.__len__() > 3 else None
-		self.metrics['merge_value_loss'].append(losses[4]) if losses.__len__() > 3 else None
 
 		Save_Txt(self.metrics['episodes'][-1], self.metrics['observation_loss'][-1], 'observation_loss', args.results_dir)
 		Save_Txt(self.metrics['episodes'][-1], self.metrics['reward_loss'][-1], 'reward_loss', args.results_dir)
 		Save_Txt(self.metrics['episodes'][-1], self.metrics['kl_loss'][-1], 'kl_loss', args.results_dir)
-		Save_Txt(self.metrics['episodes'][-1], self.metrics['merge_actor_loss'][-1], 'merge_actor_loss', args.results_dir) if losses.__len__() > 3 else None
-		Save_Txt(self.metrics['episodes'][-1], self.metrics['merge_value_loss'][-1], 'merge_value_loss', args.results_dir) if losses.__len__() > 3 else None
 
-		# lineplot(metrics['episodes'][-len(metrics['observation_loss']):], metrics['observation_loss'], 'observation_loss', results_dir)
-		# lineplot(metrics['episodes'][-len(metrics['reward_loss']):], metrics['reward_loss'], 'reward_loss', results_dir)
-		# lineplot(metrics['episodes'][-len(metrics['kl_loss']):], metrics['kl_loss'], 'kl_loss', results_dir)
-		# lineplot(metrics['episodes'][-len(metrics['actor_loss']):], metrics['actor_loss'], 'actor_loss', results_dir)
-		# lineplot(metrics['episodes'][-len(metrics['value_loss']):], metrics['value_loss'], 'value_loss', results_dir)
-
-	def save_model_data(self, episode):
-		# writer.add_scalar("train_reward", metrics['train_rewards'][-1], metrics['steps'][-1])
-		# writer.add_scalar("train/episode_reward", metrics['train_rewards'][-1], metrics['steps'][-1]*args.action_repeat)
-		# writer.add_scalar("observation_loss", metrics['observation_loss'][0][-1], metrics['steps'][-1])
-		# writer.add_scalar("reward_loss", metrics['reward_loss'][0][-1], metrics['steps'][-1])
-		# writer.add_scalar("kl_loss", metrics['kl_loss'][0][-1], metrics['steps'][-1])
-		# writer.add_scalar("actor_loss", metrics['actor_loss'][0][-1], metrics['steps'][-1])
-		# writer.add_scalar("value_loss", metrics['value_loss'][0][-1], metrics['steps'][-1])
-		# print("episodes: {}, total_steps: {}, train_reward: {} ".format(metrics['episodes'][-1], metrics['steps'][-1], metrics['train_rewards'][-1]))
-
-		# Checkpoint models
-		if episode % args.checkpoint_interval == 0:
-			# torch.save({'transition_model': transition_model.state_dict(),
-			#             'observation_model': observation_model.state_dict(),
-			#             'reward_model': reward_model.state_dict(),
-			#             'encoder': encoder.state_dict(),
-			#             'actor_model': actor_model_g.state_dict(),
-			#             'value_model': value_model_g.state_dict(),
-			#             'model_optimizer': model_optimizer.state_dict(),
-			#             'actor_optimizer': actor_optimizer_g.state_dict(),
-			#             'value_optimizer': value_optimizer_g.state_dict()
-			#             }, os.path.join(results_dir, 'models_%d.pth' % episode))
+	def save_model_data(self, episode, force=False):
+		# Checkpoint models (world model + per-algorithm bits + optimizer + metrics).
+		if force or episode % args.checkpoint_interval == 0:
+			state = {
+				'episode': episode,
+				'transition_model': _strip_dp(self.transition_model).state_dict(),
+				'observation_model': _strip_dp(self.observation_model).state_dict(),
+				'reward_model': _strip_dp(self.reward_model).state_dict(),
+				'encoder': _strip_dp(self.encoder).state_dict(),
+				'model_optimizer': self.model_optimizer.state_dict(),
+				'metrics': self.metrics,
+			}
+			if hasattr(self.algorithms, 'get_state_dict'):
+				state['algorithm'] = self.algorithms.get_state_dict()
+			torch.save(state, os.path.join(args.results_dir, 'models_%d.pth' % episode))
 			if args.checkpoint_experience:
 				torch.save(self.D, os.path.join(args.results_dir, 'experience.pth'))  # Warning: will fail with MemoryError with large memory sizes
+
+	def shutdown_workers(self):
+		if hasattr(self.algorithms, 'shutdown'):
+			self.algorithms.shutdown()
 
 
 if __name__ == "__main__":

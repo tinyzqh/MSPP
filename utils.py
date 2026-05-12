@@ -10,7 +10,6 @@ from torch.nn import functional as F
 from typing import Iterable
 from torch.nn import Module
 from parameter import args
-import pandas as pd
 
 
 def Save_Txt(xs, ys_population, title, path='', xaxis='episode'):
@@ -88,11 +87,12 @@ def imagine_ahead(prev_state, prev_belief, policy, transition_model, planning_ho
 	beliefs[0], prior_states[0] = prev_belief, prev_state
 
 	# Loop over time sequence
+	action_scale = max(1, action_scale)
 	action_repate = []
 	for t in range(T - 1):
 		_state = prior_states[t]
 
-		if action_repate.__len__() == 0:
+		if len(action_repate) == 0:
 			action_candidate = policy.get_action(beliefs[t].detach(), _state.detach())
 			for _ in range(action_scale):
 				action_repate.append(action_candidate)

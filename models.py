@@ -229,9 +229,6 @@ class MergeModel(nn.Module):
 
 # class ActorModel(jit.ScriptModule):
 class ActorModel(nn.Module):
-	prev_state = None
-	prev_belief = None
-
 	def __init__(self, belief_size, state_size, hidden_size, action_size, dist='tanh_normal',
 				 activation_function='elu', min_std=1e-4, init_std=5, mean_scale=5):
 		super().__init__()
@@ -356,8 +353,8 @@ class TanhBijector(torch.distributions.Transform):
 	def __init__(self):
 		super().__init__()
 		self.bijective = True
-		self.domain = constraints.Constraint()
-		self.codomain = constraints.Constraint()
+		self.domain = constraints.real
+		self.codomain = constraints.interval(-1.0, 1.0)
 
 	@property
 	def sign(self): return 1.
@@ -388,6 +385,7 @@ class SampleDist:
 		return getattr(self._dist, name)
 
 	def mean(self):
+		dist = self._dist.expand((self._samples, *self._dist.batch_shape))
 		sample = dist.rsample()
 		return torch.mean(sample, 0)
 

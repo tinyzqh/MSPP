@@ -54,7 +54,7 @@ parser.add_argument('--global-kl-beta', type=float, default=0, metavar='βg', he
 
 parser.add_argument('--MultiGPU', type=bool, default=True, help='if use multi gpu')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--action-scale', type=int, default=-1, metavar='TS', help='Action scale; Only used in dreamer, IF Not in dreamer, set -1.')
+parser.add_argument('--action-scale', type=int, default=1, metavar='TS', help='Action-repeat scale used inside imagine_ahead (>=1).')
 # parser.add_argument('--MergeAgent', type=bool, default=True, help='if use multi gpu')
 
 # ['cartpole-balance', 'cartpole-swingup', 'reacher-easy', 'finger-spin', 'cheetah-run', 'ball_in_cup-catch', 'walker-walk','reacher-hard', 'walker-run', 'humanoid-stand', 'humanoid-walk', 'fish-swim', 'acrobot-swingup']
